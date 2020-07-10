@@ -1619,6 +1619,26 @@ void MapReduce::write_str_int(char *file){
 	      kv->deallocate(0);
 	    }
 	    fclose(fp);
+	    delete procfile;
+}
+
+void MapReduce::write_str_str(char *file){
+
+	  if (kv == NULL)
+	    error->all("Cannot print without KeyValue");
+
+	    int n = strlen(file) + 8;
+	    char *procfile = new char[n];
+	    sprintf(procfile,"%s_%d",file,me);
+	    FILE *fp = fopen(procfile,"w");
+	    if (fp == NULL) error->one("Could not open print file");
+	    if (kv) {
+	      kv->allocate();
+	      kv->write_str_str(fp);
+	      kv->deallocate(0);
+	    }
+	    fclose(fp);
+	    delete procfile;
 }
 
 /* ----------------------------------------------------------------------

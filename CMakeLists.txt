@@ -17,7 +17,7 @@ add_executable(test_kmer src/test_kmer.cpp src/kmer.cpp)
 
 add_executable(kmer_counting src/kmer_counting_mrmpi.cpp src/kmer.cpp)
 
-add_executable(kmer_read_mapping src/kmer_read_mapping.cpp src/kmer.cpp)
+add_executable(kmer_read_mapping src/kmer_read_mapping_mrmpi.cpp src/kmer.cpp)
 
 target_include_directories(test_utils PUBLIC
                            "${PROJECT_BINARY_DIR}"
@@ -45,9 +45,9 @@ if(MPI_FOUND)
 endif()                                              
 
 if(MPI_FOUND)
-	target_include_directories(kmer_read_mapping PUBLIC "${MIMIR_SOURCE_DIR}" )
-	target_include_directories(kmer_read_mapping PUBLIC "${MPI_CXX_INCLUDE_DIRS}" )
-	target_link_libraries(kmer_read_mapping PUBLIC ${MIMIR_LIBRARY})
+	target_include_directories(kmer_read_mapping PUBLIC "${MRMPI_SOURCE_DIR}" )
+	target_link_libraries(kmer_read_mapping PUBLIC ${MRMPI_LIBRARY})
+	target_include_directories(kmer_read_mapping PUBLIC "${MPI_CXX_INCLUDE_DIRS}" )	
     target_link_libraries(kmer_read_mapping PUBLIC ${MPI_CXX_LIBRARIES})
 endif()                                              
 

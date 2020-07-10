@@ -20,9 +20,6 @@ using namespace std;
 using namespace sparc;
 using namespace MAPREDUCE_NS;
 
-struct Count {
-	int n, limit, flag;
-};
 int nproc;
 int kmer_length = -1;
 bool without_canonical_kmer = false;
@@ -34,17 +31,16 @@ void check_arg(argagg::parser_results &args, char *name) {
 	}
 
 }
-
 int run(const std::string &input, const string &outputpath, int rank,
 		int mrtimer, int mrverbosity);
 
 int main(int argc, char **argv) {
-	int rank;
+	int rank, size;
 
 	MPI_Init(&argc, &argv);
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
 
 	argagg::parser argparser { {
 
@@ -94,6 +90,7 @@ int main(int argc, char **argv) {
 	int mrverbosity = 1;
 	if (args["mrverbosity"]) {
 		mrverbosity = args["mrverbosity"].as<int>();
+		;
 	}
 
 	check_arg(args, (char*) "kmer_length");
@@ -111,7 +108,6 @@ int main(int argc, char **argv) {
 		cerr << "Error, input dir does not exists:  " << inputpath << endl;
 		return EXIT_FAILURE;
 	}
-
 	if (rank == 0) {
 		if (dir_exists(outputpath.c_str())) {
 			cerr << "Error, output dir exists:  " << outputpath << endl;
@@ -131,7 +127,6 @@ int main(int argc, char **argv) {
 
 	return 0;
 }
-
 inline void process_line(const std::string &line, KeyValue *kv) {
 	std::vector<std::string> arr = split(line, "\t");
 	if (arr.empty()) {
@@ -141,6 +136,8 @@ inline void process_line(const std::string &line, KeyValue *kv) {
 		cerr << "Warning, ignore line: " << line << endl;
 		return;
 	}
+	string id = arr.at(0);
+	trim(id);
 	string seq = arr.at(2);
 	trim(seq);
 
@@ -151,7 +148,8 @@ inline void process_line(const std::string &line, KeyValue *kv) {
 		string &word = kmers.at(i);
 		std::string encoded = kmer_to_base64(word);
 
-		kv->add((char*) encoded.c_str(), encoded.size() + 1, NULL, 0);
+		kv->add((char*) encoded.c_str(), encoded.size() + 1, (char*) id.c_str(),
+				id.size() + 1);
 	}
 }
 
@@ -182,40 +180,18 @@ void fileread(int itask, char *fname, KeyValue *kv, void *ptr) {
  ------------------------------------------------------------------------- */
 void sum(char *key, int keybytes, char *multivalue, int nvalues,
 		int *valuebytes, KeyValue *kv, void *ptr) {
-	kv->add(key, keybytes, (char*) &nvalues, sizeof(int));
-}
-
-/* ----------------------------------------------------------------------
- compare two counts
- order values by count, largest first
- ------------------------------------------------------------------------- */
-int ncompare(char *p1, int len1, char *p2, int len2) {
-	int i1 = *(int*) p1;
-	int i2 = *(int*) p2;
-	if (i1 > i2)
-		return -1;
-	else if (i1 < i2)
-		return 1;
-	else
-		return 0;
-}
-
-/* ----------------------------------------------------------------------
- process a word and its count
- depending on flag, emit KV or print it, up to limit
- ------------------------------------------------------------------------- */
-void output(uint64_t itask, char *key, int keybytes, char *value,
-		int valuebytes, KeyValue *kv, void *ptr) {
-	Count *count = (Count*) ptr;
-	count->n++;
-	if (count->n > count->limit)
-		return;
-
-	int n = *(int*) value;
-	if (count->flag)
-		printf("%d %s\n", n, key);
-	else
-		kv->add(key, keybytes, (char*) &n, sizeof(int));
+	std::stringstream ss;
+	for (int i = 0; i < nvalues; i++) {
+		if (i > 0) {
+			ss << " ";
+		}
+		int l = *valuebytes;
+		ss << multivalue;
+		valuebytes++;
+		multivalue += l;
+	}
+	std::string v = ss.str();
+	kv->add(key, keybytes, (char*) v.c_str(), v.size() + 1);
 }
 
 int run(const std::string &input, const string &outputpath, int rank,
@@ -236,27 +212,10 @@ int run(const std::string &input, const string &outputpath, int rank,
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	mr->write_str_int((char*) (outputpath+"/part").c_str());
+	mr->write_str_str((char*) (outputpath+"/part").c_str());
 
 	double tstop = MPI_Wtime();
 
-	if (0) {
-		mr->sort_values(&ncompare);
-
-		Count count;
-		count.n = 0;
-		count.limit = 10;
-		count.flag = 0;
-		mr->map(mr, output, &count);
-
-		mr->gather(1);
-		mr->sort_values(ncompare);
-
-		count.n = 0;
-		count.limit = 10;
-		count.flag = 1;
-		mr->map(mr, output, &count);
-	}
 	delete mr;
 
 	if (rank == 0) {

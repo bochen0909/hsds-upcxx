@@ -97,6 +97,8 @@ class MapReduce {
   void print(int, int, int, int);
   void print(char *, int, int, int, int, int);
   void write_str_int(char *file);
+  void write_str_str(char *file);
+
   uint64_t reduce(void (*)(char *, int, char *,
 			   int, int *, class KeyValue *, void *), void *);
   uint64_t scan(void (*)(char *, int, char *, int, void *), void *);

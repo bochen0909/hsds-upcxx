@@ -848,3 +848,32 @@ void KeyValue::write_str_int(FILE *fp)
     }
   }
 }
+
+
+void KeyValue::write_str_str(FILE *fp)
+{
+  int keybytes,valuebytes;
+  uint64_t dummy1,dummy2,dummy3;
+  char *ptr,*key,*value,*ptr_start;
+
+  for (int ipage = 0; ipage < npage; ipage++) {
+    nkey = request_page(ipage,dummy1,dummy2,dummy3);
+    ptr = page;
+    for (int i = 0; i < nkey; i++) {
+      ptr_start = ptr;
+      keybytes = *((int *) ptr);
+      valuebytes = *((int *) (ptr+sizeof(int)));;
+
+      ptr += twolenbytes;
+      ptr = ROUNDUP(ptr,kalignm1);
+      key = ptr;
+      ptr += keybytes;
+      ptr = ROUNDUP(ptr,valignm1);
+      value = ptr;
+      ptr += valuebytes;
+      ptr = ROUNDUP(ptr,talignm1);
+
+  		fprintf(fp,"%s\t%s\n", key, value);
+    }
+  }
+}

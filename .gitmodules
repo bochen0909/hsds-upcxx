@@ -1,0 +1,3 @@
+[submodule "extlib/Mimir"]
+	path = extlib/Mimir
+	url = https://github.com/Lizhen0909/Mimir.git

@@ -1603,6 +1603,24 @@ void MapReduce::print(int proc, int nstride, int kflag, int vflag)
   MPI_Barrier(comm);
 }
 
+void MapReduce::write_str_int(char *file){
+
+	  if (kv == NULL)
+	    error->all("Cannot print without KeyValue");
+
+	    int n = strlen(file) + 8;
+	    char *procfile = new char[n];
+	    sprintf(procfile,"%s_%d",file,me);
+	    FILE *fp = fopen(procfile,"w");
+	    if (fp == NULL) error->one("Could not open print file");
+	    if (kv) {
+	      kv->allocate();
+	      kv->write_str_int(fp);
+	      kv->deallocate(0);
+	    }
+	    fclose(fp);
+}
+
 /* ----------------------------------------------------------------------
    print of KV or KMV pairs to file(s)
    if one proc is printing, write to filename

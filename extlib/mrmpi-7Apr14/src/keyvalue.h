@@ -57,7 +57,7 @@ class KeyValue {
   void add(int, char *, int *, char *, int *);
 
   void print(FILE *, int, int, int);
-
+  void write_str_int(FILE *fp);
  private:
   MapReduce *mr;
   MPI_Comm comm;

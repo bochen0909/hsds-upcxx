@@ -416,8 +416,8 @@ int sequence_overlap(const string &seq1, const string &seq2, int min_over_lap,
  r ---> Size of a combination to be printed
  from https://ideone.com/ywsqBz
  */
-void combinationUtil(int arr[], int data[], int start, int end, int index,
-		std::vector<std::pair<int, int>> &results) {
+void combinationUtil(uint32_t arr[], uint32_t data[], int start, int end, int index,
+		std::vector<std::pair<uint32_t, uint32_t>> &results) {
 	int r = 2;
 	// Current combination is ready to be printed, print it
 	if (index == r) {
@@ -444,34 +444,34 @@ void combinationUtil(int arr[], int data[], int start, int end, int index,
 	}
 }
 
-void make_combination2(std::vector<int> &v,
-		std::vector<std::pair<int, int> > &results) {
+void make_combination2(std::vector<uint32_t> &v,
+		std::vector<std::pair<uint32_t, uint32_t> > &results) {
 
 	// A temporary array to store all combination one by one
-	int data[2];
+	uint32_t data[2];
 	int n = v.size();
-	int *arr = v.data();
+	uint32_t *arr = v.data();
 
 	// Print all combination using temprary array 'data[]'
 	combinationUtil(arr, data, 0, n - 1, 0, results);
 }
 
-inline void random_choice(int *arr, int n, int *data, int m) {
+inline void random_choice(uint32_t *arr, int n, uint32_t *data, int m) {
 	for (int i = 0; i < m; i++)
 		data[i] = arr[rand() % n];
 }
 //assume reads has no duplicates.
-std::vector<std::pair<int, int> > generate_edges(std::vector<int> &reads,
+std::vector<std::pair<uint32_t, uint32_t> > generate_edges(std::vector<uint32_t> &reads,
 		int max_degree) {
 	if (reads.size() <= max_degree) {
 
-		std::vector < std::pair<int, int> > results;
+		std::vector < std::pair<uint32_t, uint32_t> > results;
 		make_combination2(reads, results);
 		return results;
 	} else {
-		std::vector < std::pair<int, int> > results;
+		std::vector < std::pair<uint32_t, uint32_t> > results;
 		int m = ceil(max_degree / 2.0 * reads.size());
-		int d1[m], d2[m];
+		uint32_t d1[m], d2[m];
 		random_choice(reads.data(), reads.size(), d1, m);
 		random_choice(reads.data(), reads.size(), d2, m);
 		for (int i = 0; i < m; i++) {

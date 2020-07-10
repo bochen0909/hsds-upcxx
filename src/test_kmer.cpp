@@ -681,8 +681,8 @@ SECTION("test max_overlap") {
 TEST_CASE( "combination", "[combination]" ) {
 
 	SECTION("full combination"){
-	std::vector<std::pair<int,int> ,std::allocator<std::pair<int,int> > > results;
-	std::vector<int> arr;
+	std::vector<std::pair<uint32_t,uint32_t> ,std::allocator<std::pair<uint32_t,uint32_t> > > results;
+	std::vector<uint32_t> arr;
 
 	arr = {};
 	results = generate_edges(arr, 30);
@@ -707,8 +707,8 @@ TEST_CASE( "combination", "[combination]" ) {
 }
 
 SECTION("partial combination") {
-	std::vector<std::pair<int,int> ,std::allocator<std::pair<int,int> > > results;
-	std::vector<int> arr;
+	std::vector<std::pair<uint32_t,uint32_t> ,std::allocator<std::pair<uint32_t,uint32_t> > > results;
+	std::vector<uint32_t> arr;
 
 	arr = {};
 	results = generate_edges(arr, 0);

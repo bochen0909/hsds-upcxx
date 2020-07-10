@@ -210,16 +210,15 @@ int run(const std::string &input, const string &outputpath, int rank,
 	mr->collate(NULL);
 	int nunique = mr->reduce(sum, NULL);
 
-	MPI_Barrier(MPI_COMM_WORLD);
 
 	mr->write_str_str((char*) (outputpath+"/part").c_str());
-
+	MPI_Barrier(MPI_COMM_WORLD);
 	double tstop = MPI_Wtime();
 
 	delete mr;
 
 	if (rank == 0) {
-		printf("%d total words, %d unique words\n", nwords, nunique);
+		printf("%d total kmers, %d unique kmers\n", nwords, nunique);
 		printf("Time to process %d files on %d procs = %g (secs)\n", nfiles,
 				nproc, tstop - tstart);
 	}

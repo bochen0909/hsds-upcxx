@@ -36,7 +36,7 @@ int sequence_overlap(const string& seq1, const string& seq2, int min_over_lap,
 
 void overlap_print(const string& left, const string& right, int pos);
 
-std::vector<std::pair<int, int> > generate_edges(std::vector<int>& reads,
+std::vector<std::pair<uint32_t, uint32_t> > generate_edges(std::vector<uint32_t>& reads,
 		int max_degree);
 
 uint32_t fnv_hash(const std::string& str);

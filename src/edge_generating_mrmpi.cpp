@@ -20,12 +20,10 @@ using namespace std;
 using namespace sparc;
 using namespace MAPREDUCE_NS;
 
-struct Count {
-	int n, limit, flag;
-};
 int nproc;
-int kmer_length = -1;
-bool without_canonical_kmer = false;
+
+int max_degree = 100;
+int min_shared_kmers = 2;
 
 void check_arg(argagg::parser_results &args, char *name) {
 	if (!args[name]) {
@@ -39,26 +37,29 @@ int run(const std::string &input, const string &outputpath, int rank,
 		int mrtimer, int mrverbosity);
 
 int main(int argc, char **argv) {
-	int rank;
+	int rank, size;
 
 	MPI_Init(&argc, &argv);
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
 
 	argagg::parser argparser { {
 
 	{ "help", { "-h", "--help" }, "shows this help message", 0 },
 
 	{ "input", { "-i", "--input" },
-			"input folder which contains read sequences", 1 },
+			"reads that a kmer shares. e.g. output from kmer_read_mapping", 1 },
 
 	{ "kmer_length", { "-k", "--kmer-length" }, "length of kmer", 1 },
 
 	{ "output", { "-o", "--output" }, "output folder", 1 },
 
-	{ "without_canonical_kmer", { "--without-canonical-kmer" },
-			"do not use canonical kmer", 0 },
+	{ "max_degree", { "--max-degree" },
+			"max_degree of a node; max_degree should be greater than 1", 1 },
+
+	{ "min_shared_kmers", { "--min-shared-kmers" },
+			"minimum number of kmers that two reads share", 1 },
 
 	{ "mrtimer", { "--mr-timer-flag" },
 			"0 = none, 1 = summary, 2 = proc histograms", 1 },
@@ -81,27 +82,25 @@ int main(int argc, char **argv) {
 		return EXIT_SUCCESS;
 	}
 
-	if (args["without_canonical_kmer"]) {
-		without_canonical_kmer = true;
+	if (args["max_degree"]) {
+		max_degree = args["max_degree"].as<int>();
+	}
+
+	if (args["min_shared_kmers"]) {
+		min_shared_kmers = args["min_shared_kmers"].as<int>();
 	}
 
 	int mrtimer = 1;
 	if (args["mrtimer"]) {
 		mrtimer = args["mrtimer"].as<int>();
-		;
 	}
 
 	int mrverbosity = 1;
 	if (args["mrverbosity"]) {
 		mrverbosity = args["mrverbosity"].as<int>();
+		;
 	}
 
-	check_arg(args, (char*) "kmer_length");
-	kmer_length = args["kmer_length"].as<int>();
-	if (kmer_length < 1) {
-		cerr << "Error, length of kmer :  " << kmer_length << endl;
-		return EXIT_FAILURE;
-	}
 	check_arg(args, (char*) "input");
 	string inputpath = args["input"].as<string>();
 	check_arg(args, (char*) "output");
@@ -111,7 +110,6 @@ int main(int argc, char **argv) {
 		cerr << "Error, input dir does not exists:  " << inputpath << endl;
 		return EXIT_FAILURE;
 	}
-
 	if (rank == 0) {
 		if (dir_exists(outputpath.c_str())) {
 			cerr << "Error, output dir exists:  " << outputpath << endl;
@@ -131,27 +129,42 @@ int main(int argc, char **argv) {
 
 	return 0;
 }
-
 inline void process_line(const std::string &line, KeyValue *kv) {
 	std::vector<std::string> arr = split(line, "\t");
 	if (arr.empty()) {
 		return;
 	}
-	if (arr.size() != 3) {
+	if (arr.size() != 2) {
 		cerr << "Warning, ignore line: " << line << endl;
 		return;
 	}
-	string seq = arr.at(2);
+	string seq = arr.at(1);
 	trim(seq);
+	arr = split(seq, " ");
 
-	std::vector<std::string> kmers = generate_kmer(seq, kmer_length, 'N',
-			!without_canonical_kmer);
-	for (int i = 0; i < kmers.size(); i++) {
-		uint64_t one = 1;
-		string &word = kmers.at(i);
-		std::string encoded = kmer_to_base64(word);
+	std::vector<uint32_t> reads;
+	for (int i = 0; i < arr.size(); i++) {
+		std::string a = arr.at(i);
+		trim(a);
+		if (!a.empty()) {
+			reads.push_back(stoul(a));
+		}
+	}
+	std::vector<std::pair<uint32_t, uint32_t> > edges = generate_edges(reads,
+			max_degree);
+	//cout << arr.size()<<  " gen " << edges.size() << endl;
+	for (int i = 0; i < edges.size(); i++) {
+		uint32_t a = edges.at(i).first;
+		uint32_t b = edges.at(i).second;
+		std::stringstream ss;
+		if (a <= b) {
+			ss << a << "\t" << b;
+		} else {
+			ss << b << "\t" << a;
+		}
 
-		kv->add((char*) encoded.c_str(), encoded.size() + 1, NULL, 0);
+		string key = ss.str();
+		kv->add((char*) key.c_str(), key.size() + 1, NULL, 0);
 	}
 }
 
@@ -185,37 +198,12 @@ void sum(char *key, int keybytes, char *multivalue, int nvalues,
 	kv->add(key, keybytes, (char*) &nvalues, sizeof(int));
 }
 
-/* ----------------------------------------------------------------------
- compare two counts
- order values by count, largest first
- ------------------------------------------------------------------------- */
-int ncompare(char *p1, int len1, char *p2, int len2) {
-	int i1 = *(int*) p1;
-	int i2 = *(int*) p2;
-	if (i1 > i2)
-		return -1;
-	else if (i1 < i2)
-		return 1;
-	else
-		return 0;
-}
-
-/* ----------------------------------------------------------------------
- process a word and its count
- depending on flag, emit KV or print it, up to limit
- ------------------------------------------------------------------------- */
-void output(uint64_t itask, char *key, int keybytes, char *value,
+void filter_edges(uint64_t itask, char *key, int keybytes, char *value,
 		int valuebytes, KeyValue *kv, void *ptr) {
-	Count *count = (Count*) ptr;
-	count->n++;
-	if (count->n > count->limit)
-		return;
-
-	int n = *(int*) value;
-	if (count->flag)
-		printf("%d %s\n", n, key);
-	else
-		kv->add(key, keybytes, (char*) &n, sizeof(int));
+	uint32_t n =  (uint32_t) *value;
+	if (n >= min_shared_kmers) {
+		kv->add(key, keybytes, value, valuebytes);
+	}
 }
 
 int run(const std::string &input, const string &outputpath, int rank,
@@ -229,38 +217,26 @@ int run(const std::string &input, const string &outputpath, int rank,
 	double tstart = MPI_Wtime();
 
 	char *inputs[2] = { (char*) input.c_str() };
-	int nwords = mr->map(1, &inputs[0], 0, 1, 0, fileread, NULL);
+	uint64_t nparis = mr->map(1, &inputs[0], 0, 1, 0, fileread, NULL);
 	int nfiles = mr->mapfilecount;
 	mr->collate(NULL);
-	int nunique = mr->reduce(sum, NULL);
+	uint64_t nedges = mr->reduce(sum, NULL);
 
-
-	mr->write_str_int((char*) (outputpath+"/part").c_str());
+	MapReduce *mr2 = new MapReduce(MPI_COMM_WORLD);
+	uint64_t nfiltered =0;
+	nfiltered = mr2->map(mr, filter_edges, NULL, 0);
+	mr2->write_str_int((char*) (outputpath + "/part").c_str());
+	//mr->write_str_int((char*) (outputpath + "/part").c_str());
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	double tstop = MPI_Wtime();
 
-	if (0) {
-		mr->sort_values(&ncompare);
-
-		Count count;
-		count.n = 0;
-		count.limit = 10;
-		count.flag = 0;
-		mr->map(mr, output, &count);
-
-		mr->gather(1);
-		mr->sort_values(ncompare);
-
-		count.n = 0;
-		count.limit = 10;
-		count.flag = 1;
-		mr->map(mr, output, &count);
-	}
+	delete mr2;
 	delete mr;
 
 	if (rank == 0) {
-		printf("%d total kmers, %d unique kmers\n", nwords, nunique);
+		printf("%lu total node pairs, %lu/%lu filtered/total edges\n", nparis,
+				nfiltered, nedges);
 		printf("Time to process %d files on %d procs = %g (secs)\n", nfiles,
 				nproc, tstop - tstart);
 	}

@@ -14,7 +14,7 @@
 #ifndef KEY_VALUE_H
 #define KEY_VALUE_H
 
-#include "mpi/mpi.h"
+#include "mpi.h"
 #include "stdio.h"
 #include "stdint.h"
 

@@ -6,7 +6,7 @@ SHELL = /bin/sh
 # compiler/linker settings
 # specify flags and libraries needed for your compiler and MPI
 
-CC =		g++
+CC =		mpic++
 CCFLAGS =	-O -DMPICH_IGNORE_CXX_SEEK
 SHFLAGS =	-fPIC
 DEPFLAGS =	-M

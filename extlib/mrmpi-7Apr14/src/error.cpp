@@ -11,7 +11,6 @@
    See the README file in the top-level MapReduce directory.
 ------------------------------------------------------------------------- */
 
-#include "mpi/mpi.h"
 #include "stdlib.h"
 #include "stdio.h"
 #include "error.h"

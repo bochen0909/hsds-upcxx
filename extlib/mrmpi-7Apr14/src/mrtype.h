@@ -14,7 +14,7 @@
 #ifndef MRTYPE_H
 #define MRTYPE_H
 
-#include "mpi/mpi.h"
+#include "mpi.h"
 #include "stdint.h"
 
 namespace MAPREDUCE_NS {

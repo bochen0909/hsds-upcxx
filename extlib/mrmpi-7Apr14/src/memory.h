@@ -14,7 +14,7 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 
-#include "mpi/mpi.h"
+#include "mpi.h"
 
 namespace MAPREDUCE_NS {
 

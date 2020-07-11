@@ -14,7 +14,7 @@
 #ifndef MAP_REDUCE_H
 #define MAP_REDUCE_H
 
-#include "mpi/mpi.h"
+#include "mpi.h"
 #include "stdint.h"
 
 namespace MAPREDUCE_NS {

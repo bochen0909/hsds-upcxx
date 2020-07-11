@@ -14,7 +14,7 @@
 /* C or Fortran style interface to MapReduce library */
 /* ifdefs allow this file to be included in a C program */
 
-#include "mpi/mpi.h"
+#include "mpi.h"
 #include "stdint.h"
 
 #ifdef __cplusplus

@@ -14,7 +14,7 @@
 #ifndef KEY_MULTIVALUE_H
 #define KEY_MULTIVALUE_H
 
-#include "mpi/mpi.h"
+#include "mpi.h"
 #include "stdio.h"
 #include "stdint.h"
 

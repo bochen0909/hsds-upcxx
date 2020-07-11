@@ -14,7 +14,7 @@
 #ifndef ERROR_H
 #define ERROR_H
 
-#include "mpi/mpi.h"
+#include "mpi.h"
 
 namespace MAPREDUCE_NS {
 

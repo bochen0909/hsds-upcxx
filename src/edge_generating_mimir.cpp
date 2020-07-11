@@ -101,9 +101,11 @@ int main(int argc, char **argv) {
 	check_arg(args, (char*) "output");
 	string outputpath = args["output"].as<string>();
 
-	if (!dir_exists(inputpath.c_str())) {
-		cerr << "Error, input dir does not exists:  " << inputpath << endl;
-		return EXIT_FAILURE;
+	if (rank == 0) {
+		if (!dir_exists(inputpath.c_str())) {
+			cerr << "Error, input dir does not exists:  " << inputpath << endl;
+			return EXIT_FAILURE;
+		}
 	}
 	if (rank == 0) {
 		if (dir_exists(outputpath.c_str())) {

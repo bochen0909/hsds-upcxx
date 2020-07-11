@@ -86,10 +86,12 @@ int main(int argc, char **argv) {
 		cerr << "Error, input dir does not exists:  " << inputpath << endl;
 		return EXIT_FAILURE;
 	}
+	if (rank == 0) {
 
-	if (dir_exists(outputpath.c_str())) {
-		cerr << "Error, output dir exists:  " << outputpath << endl;
-		return EXIT_FAILURE;
+		if (dir_exists(outputpath.c_str())) {
+			cerr << "Error, output dir exists:  " << outputpath << endl;
+			return EXIT_FAILURE;
+		}
 	}
 
 	MPI_Barrier(MPI_COMM_WORLD);

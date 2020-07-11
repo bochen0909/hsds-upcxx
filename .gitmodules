@@ -1,3 +1,6 @@
 [submodule "extlib/Mimir"]
 	path = extlib/Mimir
 	url = https://github.com/Lizhen0909/Mimir.git
+[submodule "extlib/PowerGraph"]
+	path = extlib/PowerGraph
+	url = https://github.com/Lizhen0909/PowerGraph.git

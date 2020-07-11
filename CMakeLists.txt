@@ -57,11 +57,11 @@ endif()
 if(MIMIR_LIBRARY)
 	add_executable(kmer_counting_mimir src/kmer_counting_mimir.cpp src/kmer.cpp)
 	add_executable(kmer_read_mapping_mimir src/kmer_read_mapping_mimir.cpp src/kmer.cpp)
-
+	add_executable(edge_generating_mimir src/edge_generating_mimir.cpp src/kmer.cpp)
 endif()
 
 if(MIMIR_LIBRARY)
-	foreach(EXEC kmer_counting_mimir kmer_read_mapping_mimir)
+	foreach(EXEC kmer_counting_mimir kmer_read_mapping_mimir edge_generating_mimir)
 		target_include_directories(${EXEC} PUBLIC "${MIMIR_SOURCE_DIR}" )
 		target_link_libraries(${EXEC} PUBLIC ${MIMIR_LIBRARY})
 		target_include_directories(${EXEC} PUBLIC "${MPI_CXX_INCLUDE_DIRS}" )

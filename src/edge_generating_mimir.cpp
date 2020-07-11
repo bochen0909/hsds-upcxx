@@ -13,14 +13,11 @@
 #include "utils.h"
 #include "kmer.h"
 
-#include "mapreduce.h"
-#include "keyvalue.h"
+#include "mimir.h"
 
+using namespace MIMIR_NS;
 using namespace std;
 using namespace sparc;
-using namespace MAPREDUCE_NS;
-
-int nproc;
 
 int max_degree = 100;
 int min_shared_kmers = 2;
@@ -32,10 +29,8 @@ void check_arg(argagg::parser_results &args, char *name) {
 	}
 
 }
-
-int run(const std::string &input, const string &outputpath, int rank,
-		int mrtimer, int mrverbosity);
-
+int run(const std::vector<std::string> &input, const string &outputpath,
+		int rank);
 int main(int argc, char **argv) {
 	int rank, size;
 
@@ -116,6 +111,7 @@ int main(int argc, char **argv) {
 			return EXIT_FAILURE;
 		}
 	}
+
 	MPI_Barrier(MPI_COMM_WORLD);
 	if (rank == 0) {
 		if (make_dir(outputpath.c_str()) < 0) {
@@ -124,26 +120,51 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	run(inputpath, outputpath, rank, mrtimer, mrverbosity);
+	std::vector<std::string> input;
+	input.push_back(inputpath);
+	if (input.size() == 0) {
+		cerr << "Error, input dir is empty " << outputpath << endl;
+		return EXIT_FAILURE;
+	} else {
+		if (rank == 0) {
+			cout << "#of inputs: " << input.size() << endl;
+		}
+	}
+	run(input, outputpath, rank);
 	MPI_Finalize();
 
 	return 0;
 }
-inline void process_line(const std::string &line, KeyValue *kv) {
-	std::vector<std::string> arr = split(line, "\t");
-	if (arr.empty()) {
-		return;
+
+void sum_edge_weight(Readable<char*, uint32_t> *input,
+		Writable<char*, uint32_t> *output, void *ptr) {
+	char *key = NULL;
+	uint32_t val = 0;
+	uint32_t count = 0;
+	while (input->read(&key, &val) == true) {
+		count += val;
 	}
-	if (arr.size() != 2) {
+	if (count >= min_shared_kmers) {
+		output->write(&key, &count);
+	}
+}
+
+void combine(Combinable<char*, uint32_t> *combiner, char **key, uint32_t *val1,
+		uint32_t *val2, uint32_t *rval, void *ptr) {
+	*rval = *val1 + *val2;
+}
+
+inline void process_line(const std::string &line,
+		Writable<char*, uint32_t> *output) {
+	std::vector<std::string> arr = split(line, " ");
+
+	if (arr.size() < 2) {
 		cerr << "Warning, ignore line: " << line << endl;
 		return;
 	}
-	string seq = arr.at(1);
-	trim(seq);
-	arr = split(seq, " ");
 
 	std::vector<uint32_t> reads;
-	for (int i = 0; i < arr.size(); i++) {
+	for (int i = 1; i < arr.size(); i++) {
 		std::string a = arr.at(i);
 		trim(a);
 		if (!a.empty()) {
@@ -152,102 +173,46 @@ inline void process_line(const std::string &line, KeyValue *kv) {
 	}
 	std::vector<std::pair<uint32_t, uint32_t> > edges = generate_edges(reads,
 			max_degree);
-	//cout << arr.size()<<  " gen " << edges.size() << endl;
 	for (int i = 0; i < edges.size(); i++) {
 		uint32_t a = edges.at(i).first;
 		uint32_t b = edges.at(i).second;
 		std::stringstream ss;
 		if (a <= b) {
-			ss << a << "\t" << b;
+			ss << a << " " << b;
 		} else {
-			ss << b << "\t" << a;
+			ss << b << " " << a;
 		}
 
 		string key = ss.str();
-		kv->add((char*) key.c_str(), key.size() + 1, NULL, 0);
+
+		uint32_t one = 1;
+		char *c = (char*) key.c_str();
+		output->write(&c, &one);
 	}
 }
 
-void fileread(int itask, char *fname, KeyValue *kv, void *ptr) {
-	// filesize = # of bytes in file
-
-	struct stat stbuf;
-	int flag = stat(fname, &stbuf);
-	if (flag < 0) {
-		printf("ERROR: Could not query file size\n");
-		MPI_Abort(MPI_COMM_WORLD, 1);
-	}
-
-	fstream newfile;
-	newfile.open(fname, ios::in); //open a file to perform read operation using file object
-	if (newfile.is_open()) {   //checking whether the file is open
-		string tp;
-		while (getline(newfile, tp)) { //read data from file object and put it into string.
-			process_line(tp, kv);
-		}
-		newfile.close(); //close the file object.
+//map line to (kmer,readid)
+void line_parse_map_fun(Readable<char*, void> *input,
+		Writable<char*, uint32_t> *output, void *ptr) {
+	char *line = NULL;
+	while (input->read(&line, NULL) == true) {
+		process_line(line, output);
 	}
 }
 
-/* ----------------------------------------------------------------------
- count word occurrence
- emit key = word, value = # of multi-values
- ------------------------------------------------------------------------- */
-void sum(char *key, int keybytes, char *multivalue, int nvalues,
-		int *valuebytes, KeyValue *kv, void *ptr) {
-	if (nvalues >= min_shared_kmers) {
-		kv->add(key, keybytes, (char*) &nvalues, sizeof(int));
-	}
-}
+int run(const std::vector<std::string> &input, const string &outputpath,
+		int rank) {
 
-void filter_edges(uint64_t itask, char *key, int keybytes, char *value,
-		int valuebytes, KeyValue *kv, void *ptr) {
-	uint32_t n = (uint32_t) *value;
-	if (n >= min_shared_kmers) {
-		kv->add(key, keybytes, value, valuebytes);
-	}
-}
-
-int run(const std::string &input, const string &outputpath, int rank,
-		int mrtimer, int mrverbosity) {
-
-	MapReduce *mr = new MapReduce(MPI_COMM_WORLD);
-	mr->verbosity = mrverbosity;
-	mr->timer = mrtimer;
-
-	MPI_Barrier(MPI_COMM_WORLD);
-	double tstart = MPI_Wtime();
-
-	char *inputs[2] = { (char*) input.c_str() };
-	uint64_t nparis = mr->map(1, &inputs[0], 0, 1, 0, fileread, NULL);
-	int nfiles = mr->mapfilecount;
-	mr->collate(NULL);
-	uint64_t nedges = mr->reduce(sum, NULL);
-	MapReduce *mr2 = NULL;
-	if (true) {
-		mr->write_str_int((char*) (outputpath + "/part").c_str());
-	} else {
-		mr2 = new MapReduce(MPI_COMM_WORLD);
-		uint64_t nfiltered = 0;
-		nfiltered = mr2->map(mr, filter_edges, NULL, 0);
-		mr2->write_str_int((char*) (outputpath + "/part").c_str());
-	}
-	MPI_Barrier(MPI_COMM_WORLD);
-
-	double tstop = MPI_Wtime();
-
-	if (mr2) {
-		delete mr2;
-	}
-	delete mr;
+	MimirContext<char*, uint32_t, char*, void, char*, uint32_t> *ctx =
+			new MimirContext<char*, uint32_t, char*, void, char*, uint32_t>(
+					input, outputpath + "/edge", MPI_COMM_WORLD, combine);
+	uint64_t n_input = ctx->map(line_parse_map_fun);
+	uint64_t n_edges = ctx->reduce(sum_edge_weight, NULL, true, "text");
+	delete ctx;
 
 	if (rank == 0) {
-		printf("%lu total node pairs, %lu filtered/total edges\n", nparis,
-				nedges);
-		printf("Time to process %d files on %d procs = %g (secs)\n", nfiles,
-				nproc, tstop - tstart);
+		printf(" n_edges=%ld\n", n_edges);
 	}
-
 	return 0;
 }
 

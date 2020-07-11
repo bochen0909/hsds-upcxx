@@ -87,6 +87,7 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
+	MPI_Barrier(MPI_COMM_WORLD);
 	if (dir_exists(outputpath.c_str())) {
 		cerr << "Error, output dir exists:  " << outputpath << endl;
 		return EXIT_FAILURE;

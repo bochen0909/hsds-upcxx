@@ -84,13 +84,11 @@ int main(int argc, char **argv) {
 	int mrtimer = 1;
 	if (args["mrtimer"]) {
 		mrtimer = args["mrtimer"].as<int>();
-		;
 	}
 
 	int mrverbosity = 1;
 	if (args["mrverbosity"]) {
 		mrverbosity = args["mrverbosity"].as<int>();
-		;
 	}
 
 	check_arg(args, (char*) "kmer_length");
@@ -128,7 +126,7 @@ int main(int argc, char **argv) {
 	return 0;
 }
 inline void process_line(const std::string &line, KeyValue *kv) {
-	std::vector<std::string> arr = split(line, "\t");
+	std::vector < std::string > arr = split(line, "\t");
 	if (arr.empty()) {
 		return;
 	}
@@ -141,13 +139,12 @@ inline void process_line(const std::string &line, KeyValue *kv) {
 	string seq = arr.at(2);
 	trim(seq);
 
-	std::vector<std::string> kmers = generate_kmer(seq, kmer_length, 'N',
+	std::vector < std::string > kmers = generate_kmer(seq, kmer_length, 'N',
 			!without_canonical_kmer);
 	for (int i = 0; i < kmers.size(); i++) {
-		uint64_t one = 1;
 		string &word = kmers.at(i);
 		std::string encoded = kmer_to_base64(word);
-
+		//cout << "MMM:" << id << "\t" << encoded << endl;
 		kv->add((char*) encoded.c_str(), encoded.size() + 1, (char*) id.c_str(),
 				id.size() + 1);
 	}
@@ -178,13 +175,14 @@ void fileread(int itask, char *fname, KeyValue *kv, void *ptr) {
  count word occurrence
  emit key = word, value = # of multi-values
  ------------------------------------------------------------------------- */
-void sum(char *key, int keybytes, char *multivalue, int nvalues,
+void sum_block(char *key, int keybytes, char *multivalue, int nvalues,
 		int *valuebytes, KeyValue *kv, void *ptr) {
 	std::stringstream ss;
 	for (int i = 0; i < nvalues; i++) {
 		if (i > 0) {
 			ss << " ";
 		}
+
 		int l = *valuebytes;
 		ss << multivalue;
 		valuebytes++;
@@ -192,6 +190,21 @@ void sum(char *key, int keybytes, char *multivalue, int nvalues,
 	}
 	std::string v = ss.str();
 	kv->add(key, keybytes, (char*) v.c_str(), v.size() + 1);
+
+}
+void sum(char *key, int keybytes, char *multivalue, int nvalues,
+		int *valuebytes, KeyValue *kv, void *ptr) {
+	if (nvalues > 0) {
+		sum_block(key, keybytes, multivalue, nvalues, valuebytes, kv, ptr);
+	} else {
+		MapReduce *mr = (MapReduce*) valuebytes;
+		int nblocks;
+		uint64_t nvalues_total = mr->multivalue_blocks(nblocks);
+		for (int iblock = 0; iblock < nblocks; iblock++) {
+			int nv = mr->multivalue_block(iblock, &multivalue, &valuebytes);
+			sum_block(key, keybytes, multivalue, nv, valuebytes, kv, ptr);
+		}
+	}
 }
 
 int run(const std::string &input, const string &outputpath, int rank,
@@ -210,8 +223,7 @@ int run(const std::string &input, const string &outputpath, int rank,
 	mr->collate(NULL);
 	int nunique = mr->reduce(sum, NULL);
 
-
-	mr->write_str_str((char*) (outputpath+"/part").c_str());
+	mr->write_str_str((char*) (outputpath + "/part").c_str());
 	MPI_Barrier(MPI_COMM_WORLD);
 	double tstop = MPI_Wtime();
 

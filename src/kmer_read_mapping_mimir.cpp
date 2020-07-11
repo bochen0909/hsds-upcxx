@@ -92,6 +92,7 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
+	MPI_Barrier(MPI_COMM_WORLD);
 	if (rank == 0) {
 		if (make_dir(outputpath.c_str()) < 0) {
 			cerr << "Error, mkdir dir failed for " << outputpath << endl;
@@ -115,24 +116,28 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
-void countword(Readable<char*, char*> *input, Writable<char*, char*> *output,
+void countword(Readable<char*, uint32_t> *input, Writable<char*, char*> *output,
 		void *ptr) {
 	char *key = NULL;
-	char* val = 0;
+	uint32_t val = 0;
 	std::stringstream ss;
 
+	bool first = true;
 	while (input->read(&key, &val) == true) {
-		cout << key << "\t'" << val <<"'" << endl;
-		ss << val << " ";
+		if (!first) {
+			ss << " ";
+		}
+		ss << val;
+		first = false;
 	}
 	string v = ss.str();
-	char* s = (char*) v.c_str();
+	char *s = (char*) v.c_str();
 	cout << s << endl;
 	output->write(&key, &s);
 }
 
 //map line to (kmer,readid)
-void map_fun(Readable<char*, void> *input, Writable<char*, char*> *output,
+void map_fun(Readable<char*, void> *input, Writable<char*, uint32_t> *output,
 		void *ptr) {
 	char *line = NULL;
 	while (input->read(&line, NULL) == true) {
@@ -145,13 +150,13 @@ void map_fun(Readable<char*, void> *input, Writable<char*, char*> *output,
 			continue;
 		}
 
-		string readid_string =arr.at(0);
+		string readid_string = arr.at(0);
 		trim(readid_string);
-		if(readid_string.empty()){
+		if (readid_string.empty()) {
 			cerr << "Warning, readid empty, ignore line: " << line << endl;
 			continue;
 		}
-		char *readid = (char*) readid_string.c_str();
+		uint32_t readid = stoul(readid_string);
 		string seq = arr.at(2);
 		trim(seq);
 
@@ -162,7 +167,6 @@ void map_fun(Readable<char*, void> *input, Writable<char*, char*> *output,
 			string &word = kmers.at(i);
 			std::string encoded = kmer_to_base64(word);
 			char *c = (char*) encoded.c_str();
-			//cout << readid << "\t" << c << endl;
 			output->write(&c, &readid);
 		}
 	}
@@ -171,9 +175,10 @@ void map_fun(Readable<char*, void> *input, Writable<char*, char*> *output,
 int run(const std::vector<std::string> &input, const string &outputpath,
 		int rank) {
 
-	MimirContext<char*, char*, char*, void> *ctx = new MimirContext<char*,
-			char*, char*, void>(input, outputpath + "/krm", MPI_COMM_WORLD,
-	NULL);
+	MimirContext<char*, uint32_t, char*, void, char*, char*> *ctx =
+			new MimirContext<char*, uint32_t, char*, void, char*, char*>(input,
+					outputpath + "/krm", MPI_COMM_WORLD,
+					NULL);
 	ctx->map(map_fun);
 	uint64_t nunique = ctx->reduce(countword, NULL, true, "text");
 	delete ctx;

@@ -134,7 +134,6 @@ void countword(Readable<char*, uint32_t> *input, Writable<char*, char*> *output,
 	}
 	string v = ss.str();
 	char *s = (char*) v.c_str();
-	cout << s << endl;
 	output->write(&key, &s);
 }
 

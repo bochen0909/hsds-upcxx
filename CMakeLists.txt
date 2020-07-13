@@ -14,6 +14,11 @@ option(BUILD_SPARC_MRMPI "build MR-MPI version of Sparc" ON)
 option(BUILD_SPARC_MPI "build pure MPI version of Sparc" ON)
 
 set(LOCAL_EXT_PREFIX_DIR ${PROJECT_SOURCE_DIR}/extlib/local)       
+
+add_custom_target(sparc_mimir ALL)
+add_custom_target(sparc_mrmpi ALL)
+add_custom_target(sparc_mpi ALL)
+
 ########## external project ##################
 
 include(ExternalProject)
@@ -158,6 +163,8 @@ if(BUILD_SPARC_MRMPI)
 		target_link_libraries(${EXEC} PUBLIC mrmpi)
 		target_include_directories(${EXEC} PUBLIC "${MPI_CXX_INCLUDE_DIRS}" )
 	    target_link_libraries(${EXEC} PUBLIC ${MPI_CXX_LIBRARIES})
+	    set_target_properties(${EXEC} PROPERTIES EXCLUDE_FROM_ALL TRUE)
+	    add_dependencies(sparc_mrmpi ${EXEC})
 	endforeach(EXEC)
 	
 endif()                                
@@ -172,13 +179,14 @@ if(BUILD_SPARC_MIMIR)
 	add_executable(kmer_counting_mimir src/kmer_counting_mimir.cpp src/kmer.cpp)
 	add_executable(kmer_read_mapping_mimir src/kmer_read_mapping_mimir.cpp src/kmer.cpp)
 	add_executable(edge_generating_mimir src/edge_generating_mimir.cpp src/kmer.cpp)
-
 	foreach(EXEC kmer_counting_mimir kmer_read_mapping_mimir edge_generating_mimir)
 		add_dependencies(${EXEC} mimirlib)
 		target_include_directories(${EXEC} PUBLIC "${LOCAL_EXT_PREFIX_DIR}/include" )
 		target_link_libraries(${EXEC} PUBLIC mimir)
 		target_include_directories(${EXEC} PUBLIC "${MPI_CXX_INCLUDE_DIRS}" )
 	    target_link_libraries(${EXEC} PUBLIC ${MPI_CXX_LIBRARIES})
+	    set_target_properties(${EXEC} PROPERTIES EXCLUDE_FROM_ALL TRUE)
+	    add_dependencies(sparc_mimir ${EXEC})
 	endforeach(EXEC)
 endif()                                              
 
@@ -197,5 +205,10 @@ if(BUILD_SPARC_MIMIR)
 		target_include_directories(${EXEC} PUBLIC "${MPI_CXX_INCLUDE_DIRS}" )
 		target_link_libraries(${EXEC} PUBLIC zmq leveldb)
 	    target_link_libraries(${EXEC} PUBLIC ${MPI_CXX_LIBRARIES})
+	    set_target_properties(${EXEC} PROPERTIES EXCLUDE_FROM_ALL TRUE)
+	    add_dependencies(sparc_mpi ${EXEC})
 	endforeach(EXEC)
 endif()
+
+
+

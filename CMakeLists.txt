@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 option(BUILD_SPARC_MIMIR "build Mimir version of Sparc" ON)
 option(BUILD_SPARC_MRMPI "build MR-MPI version of Sparc" ON)
+option(BUILD_SPARC_MPI "build pure MPI version of Sparc" ON)
 
 set(LOCAL_EXT_PREFIX_DIR ${PROJECT_SOURCE_DIR}/extlib/local)       
 ########## external project ##################
@@ -61,7 +62,7 @@ ExternalProject_Add(libzmq
   )
 set_target_properties(libzmq PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
-ExternalProject_Add(cppzmq
+ExternalProject_Add(cppzmqlib
   DEPENDS libzmq
   PREFIX ${PROJECT_SOURCE_DIR}/extlib
   GIT_REPOSITORY https://github.com/zeromq/cppzmq.git
@@ -72,7 +73,7 @@ ExternalProject_Add(cppzmq
   BUILD_COMMAND  mkdir -p build && cd build && cmake  -DCPPZMQ_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>  ..  
   INSTALL_COMMAND  cd build && make install 
   )
-set_target_properties(cppzmq PROPERTIES EXCLUDE_FROM_ALL TRUE)
+set_target_properties(cppzmqlib PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 
 ExternalProject_Add(snappy
@@ -87,7 +88,7 @@ ExternalProject_Add(snappy
   )
 set_target_properties(snappy PROPERTIES EXCLUDE_FROM_ALL TRUE)
   
-ExternalProject_Add(leveldb
+ExternalProject_Add(leveldblib
   DEPENDS snappy
   PREFIX ${PROJECT_SOURCE_DIR}/extlib
   GIT_REPOSITORY https://github.com/google/leveldb.git
@@ -105,7 +106,7 @@ ExternalProject_Add(leveldb
   -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> .. && make 
   INSTALL_COMMAND  cd build && make install 
   )
-set_target_properties(leveldb PROPERTIES EXCLUDE_FROM_ALL TRUE)
+set_target_properties(leveldblib PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 
 ######### sparc mpi ##########################
@@ -169,9 +170,18 @@ endif()
 
 
 ############# mpi programs ###########################
+if(BUILD_SPARC_MIMIR)
+	find_package(MPI 3.0 REQUIRED)
+	
+	link_directories( "${LOCAL_EXT_PREFIX_DIR}/lib" )
+	
+	add_executable(edge_generating_mpi src/edge_generating_mpi.cpp src/kmer.cpp)
 
-add_custom_target( foo ALL )
-add_dependencies( foo leveldb cppzmq )
-
-find_package(cppzmq HINTS ${LOCAL_EXT_PREFIX_DIR})
-#target_link_libraries(foo cppzmq)
+	foreach(EXEC edge_generating_mpi)
+		add_dependencies(${EXEC} leveldblib cppzmqlib)
+		target_include_directories(${EXEC} PUBLIC "${LOCAL_EXT_PREFIX_DIR}/include" )
+		target_include_directories(${EXEC} PUBLIC "${MPI_CXX_INCLUDE_DIRS}" )
+		target_link_libraries(${EXEC} PUBLIC zmq leveldb)
+	    target_link_libraries(${EXEC} PUBLIC ${MPI_CXX_LIBRARIES})
+	endforeach(EXEC)
+endif()

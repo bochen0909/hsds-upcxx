@@ -51,8 +51,6 @@ int main(int argc, char **argv) {
 	{ "input", { "-i", "--input" },
 			"reads that a kmer shares. e.g. output from kmer_read_mapping", 1 },
 
-	{ "kmer_length", { "-k", "--kmer-length" }, "length of kmer", 1 },
-
 	{ "output", { "-o", "--output" }, "output folder", 1 },
 
 	{ "max_degree", { "--max-degree" },

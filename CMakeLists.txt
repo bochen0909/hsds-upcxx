@@ -49,6 +49,32 @@ ExternalProject_Add(gzstream
 set_target_properties(gzstream PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 
+ExternalProject_Add(libzmq
+  PREFIX ${PROJECT_SOURCE_DIR}/extlib
+  GIT_REPOSITORY https://github.com/zeromq/libzmq.git
+  GIT_TAG v4.3.2
+  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
+  BUILD_IN_SOURCE 1
+  CONFIGURE_COMMAND  "" 
+  BUILD_COMMAND  mkdir -p build && cd build && cmake  -DBUILD_SHARED=OFF -DBUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>  ..  
+  INSTALL_COMMAND  cd build && make install 
+  )
+set_target_properties(libzmq PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
+ExternalProject_Add(cppzmq
+  DEPENDS libzmq
+  PREFIX ${PROJECT_SOURCE_DIR}/extlib
+  GIT_REPOSITORY https://github.com/zeromq/cppzmq.git
+  GIT_TAG v4.6.0
+  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
+  BUILD_IN_SOURCE 1
+  CONFIGURE_COMMAND  "" 
+  BUILD_COMMAND  mkdir -p build && cd build && cmake  -DCPPZMQ_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>  ..  
+  INSTALL_COMMAND  cd build && make install 
+  )
+set_target_properties(cppzmq PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
+
 ExternalProject_Add(snappy
   PREFIX ${PROJECT_SOURCE_DIR}/extlib
   GIT_REPOSITORY https://github.com/google/snappy.git
@@ -143,3 +169,9 @@ endif()
 
 
 ############# mpi programs ###########################
+
+add_custom_target( foo ALL )
+add_dependencies( foo leveldb cppzmq )
+
+find_package(cppzmq HINTS ${LOCAL_EXT_PREFIX_DIR})
+#target_link_libraries(foo cppzmq)

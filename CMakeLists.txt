@@ -69,3 +69,37 @@ if(MIMIR_LIBRARY)
 	endforeach(EXEC)
 	
 endif()                                              
+
+
+############# mpi programs ###########################
+include(ExternalProject)
+
+ExternalProject_Add(snappy
+  PREFIX ${Sparc-MPI_SOURCE_DIR}/extlib
+  GIT_REPOSITORY https://github.com/google/snappy.git
+  GIT_TAG 1.1.8
+  INSTALL_DIR ${Sparc-MPI_SOURCE_DIR}/extlib/local
+  BUILD_IN_SOURCE 1
+  CONFIGURE_COMMAND  "" 
+  BUILD_COMMAND  mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> .. && make 
+  INSTALL_COMMAND  cd build && make install 
+  )
+  
+ExternalProject_Add(leveldb
+  DEPENDS snappy
+  PREFIX ${Sparc-MPI_SOURCE_DIR}/extlib
+  GIT_REPOSITORY https://github.com/google/leveldb.git
+  GIT_TAG 1.22
+  INSTALL_DIR ${Sparc-MPI_SOURCE_DIR}/extlib/local
+  BUILD_IN_SOURCE 1
+  PATCH_COMMAND git apply ${Sparc-MPI_SOURCE_DIR}/patch/leveldb.patch
+  CONFIGURE_COMMAND  "" 
+  BUILD_COMMAND  
+  mkdir -p build && cd build && 
+  cmake -DCMAKE_BUILD_TYPE=Release
+  -DLEVELDB_BUILD_TESTS=OFF
+  -DLEVELDB_BUILD_BENCHMARKS=OFF
+  -DLOCAL_PREFIX_PATH=<INSTALL_DIR>
+  -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> .. && make 
+  INSTALL_COMMAND  cd build && make install 
+  )

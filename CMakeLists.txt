@@ -75,6 +75,20 @@ ExternalProject_Add(cppzmqlib
   )
 set_target_properties(cppzmqlib PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
+ExternalProject_Add(zmqpplib
+  DEPENDS libzmq
+  PREFIX ${PROJECT_SOURCE_DIR}/extlib
+  GIT_REPOSITORY https://github.com/zeromq/zmqpp.git
+  GIT_TAG 4.2.0
+  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
+  BUILD_IN_SOURCE 1
+  PATCH_COMMAND git apply ${PROJECT_SOURCE_DIR}/patch/zmqpp.patch
+  CONFIGURE_COMMAND  "" 
+  BUILD_COMMAND 
+  make CXXFLAGS=-I<INSTALL_DIR>/include   libzmqpp.a   
+  INSTALL_COMMAND make install PREFIX=<INSTALL_DIR> BUILD_SHARED=NO 
+  )
+set_target_properties(zmqpplib PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 ExternalProject_Add(snappy
   PREFIX ${PROJECT_SOURCE_DIR}/extlib
@@ -178,7 +192,7 @@ if(BUILD_SPARC_MIMIR)
 	add_executable(edge_generating_mpi src/edge_generating_mpi.cpp src/kmer.cpp)
 
 	foreach(EXEC edge_generating_mpi)
-		add_dependencies(${EXEC} leveldblib cppzmqlib)
+		add_dependencies(${EXEC} leveldblib cppzmqlib zmqpplib)
 		target_include_directories(${EXEC} PUBLIC "${LOCAL_EXT_PREFIX_DIR}/include" )
 		target_include_directories(${EXEC} PUBLIC "${MPI_CXX_INCLUDE_DIRS}" )
 		target_link_libraries(${EXEC} PUBLIC zmq leveldb)

@@ -24,6 +24,9 @@ SOURCES=$(wildcard *.cpp)
 OBJECTS=$(patsubst %.cpp, %.o, $(SOURCES))
 OBJ=$(OBJECTS)
 EXE=libmrmpi.a
+ifndef INSTALL_DIR
+   INSTALL_DIR=/usr/local
+endif
 
 # Library targets
 
@@ -47,3 +50,10 @@ shlib:	$(OBJ)
 
 DEPENDS = $(OBJ:.o=.d)
 include $(DEPENDS)
+
+install: lib
+	mkdir -p $(INSTALL_DIR)/include/mrmpi && cp *.h $(INSTALL_DIR)/include/mrmpi && mkdir -p $(INSTALL_DIR)/lib/ && cp libmrmpi.a $(INSTALL_DIR)/lib/
+
+clean:
+	rm -fr $(OBJECTS) $(EXE)
+

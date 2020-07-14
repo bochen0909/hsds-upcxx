@@ -75,7 +75,7 @@ inline char rc_transform(char c) {
 
 inline vector<string> _internal_generate_kmer(const string &seq, int k,
 		bool is_canonical) {
-	vector < string > kmers;
+	vector<string> kmers;
 
 	for (int i = 0; i < int(seq.size()) - k + 1; i++) {
 		if (is_canonical) {
@@ -110,15 +110,15 @@ string random_generate_kmer(const string &seq, int k, bool is_canonical) {
 
 vector<string> generate_kmer(const string &seq, int k, char err_char,
 		bool is_canonical) {
-	std::vector < std::string > splits;
+	std::vector<std::string> splits;
 
 	boost::split(splits, seq, boost::lambda::_1 == err_char);
 
-	std::vector < string > results;
+	std::vector<string> results;
 
 	for (size_t i = 0; i < splits.size(); i++) {
 
-		vector < string > tmp = _internal_generate_kmer(splits.at(i), k,
+		vector<string> tmp = _internal_generate_kmer(splits.at(i), k,
 				is_canonical);
 		results.insert(results.end(), tmp.begin(), tmp.end());
 		tmp = _internal_generate_kmer(reverse_complement(splits.at(i)), k,
@@ -127,7 +127,7 @@ vector<string> generate_kmer(const string &seq, int k, char err_char,
 
 	}
 
-	std::unordered_set < string > s;
+	std::unordered_set<string> s;
 	for (string i : results)
 		s.insert(i);
 	results.assign(s.begin(), s.end());
@@ -137,7 +137,7 @@ vector<string> generate_kmer(const string &seq, int k, char err_char,
 
 vector<unsigned long> generate_kmer_number(const string &seq, int k,
 		char err_char, bool is_canonical) {
-	vector < string > kmers = generate_kmer(seq, k, err_char, is_canonical);
+	vector<string> kmers = generate_kmer(seq, k, err_char, is_canonical);
 	vector<unsigned long> numbers(kmers.size());
 	for (size_t i = 0; i < kmers.size(); i++) {
 		numbers[i] = kmer_to_number(kmers.at(i));
@@ -147,15 +147,15 @@ vector<unsigned long> generate_kmer_number(const string &seq, int k,
 
 vector<string> generate_kmer_for_fastseq(const string &seq, int k,
 		char err_char, bool is_canonical) {
-	std::vector < std::string > splits;
+	std::vector<std::string> splits;
 
 	boost::split(splits, seq, boost::lambda::_1 == err_char);
 
-	std::vector < string > results;
+	std::vector<string> results;
 
 	for (size_t i = 0; i < splits.size(); i++) {
 
-		vector < string > tmp = _internal_generate_kmer(splits.at(i), k,
+		vector<string> tmp = _internal_generate_kmer(splits.at(i), k,
 				is_canonical);
 		results.insert(results.end(), tmp.begin(), tmp.end());
 	}
@@ -196,215 +196,6 @@ inline std::vector<std::tuple<int, string>> split_evenly(const string &text,
 	return v;
 }
 
-inline void kmpPreprocess(const string &word, std::vector<int> &table) {
-
-	int pos = 1;
-	int cnd = 0;
-	table[0] = -1;
-	while (pos < word.length()) {
-		if (word[pos] == word[cnd]) {
-			table[pos] = table[cnd];
-			pos++;
-			cnd++;
-		} else {
-			table[pos] = cnd;
-			cnd = table[cnd];
-			while (cnd >= 0 && word[pos] != word[cnd]) {
-				cnd = table[cnd];
-			}
-			pos++;
-			cnd++;
-		}
-	}
-	table[pos] = cnd;
-	if (false) {
-		std::cerr << word << "\t";
-		for (auto i : table)
-			std::cerr << i << ' ';
-		std::cerr << std::endl;
-	}
-}
-
-void kmpSearch(const string &word, const string &text,
-		std::vector<int> &positions) {
-
-	if (word.length() == 0 || text.length() == 0
-			|| word.length() > text.length()) {
-		return;
-	}
-
-	auto table = std::vector<int>(word.length() + 1);
-	kmpPreprocess(word, table);
-	int j = 0;
-	int k = 0;
-
-	positions.clear();
-	while (j < text.length()) {
-		if (word[k] == text[j]) {
-			j++;
-			k++;
-			if (k == word.length()) {
-				positions.push_back(j - k);
-				k = table[k];
-			}
-		} else {
-			k = table[k];
-			if (k < 0) {
-				j++;
-				k++;
-			}
-		}
-	}
-}
-
-std::vector<int> pigeonhole_knuth_morris_pratt_search(const string &longword,
-		const string &text, int n_err_allowed) {
-	std::vector<int> indexes;
-
-	if (n_err_allowed <= 0) {
-		kmpSearch(longword, text, indexes);
-		return indexes;
-	}
-	if (longword.length() == 0 || text.length() == 0
-			|| longword.length() > text.length()
-			|| longword.length() < n_err_allowed + 1) {
-		return indexes;
-	}
-
-	int pos;
-	string word;
-	auto splits = split_evenly(longword, n_err_allowed + 1);
-	for (std::tuple<int, string> &t : splits) {
-		std::tie(pos, word) = t;
-		std::vector<int> found_indexes;
-		kmpSearch(word, text, found_indexes);
-		for (int i : found_indexes) {
-
-			int err_count = 0;
-			for (int j = i - pos, k = 0; j < i - pos + longword.length();
-					j++, k++) {
-				if (longword[k] != text[j])
-					++err_count;
-				if (err_count > n_err_allowed)
-					break;
-			}
-			if (err_count <= n_err_allowed & i >= pos) {
-				indexes.push_back(i - pos);
-			}
-		}
-	}
-
-	std::unordered_set<int> s;
-	for (int i : indexes)
-		s.insert(i);
-	indexes.assign(s.begin(), s.end());
-	std::sort(indexes.begin(), indexes.end());
-	return indexes;
-}
-
-void overlap_print(const string &left, const string &right, int pos) {
-	if (pos < 0)
-		pos = left.length();
-	cout << endl;
-	cout << left << endl;
-	for (auto i = 0; i < pos; i++)
-		cout << " ";
-	cout << right << endl;
-
-}
-
-//return the alignment index in the left string
-int left_right_overlap(const string &left, const string &right,
-		int min_over_lap, float err_rate) {
-	assert(min_over_lap > 0);
-	string word = right.substr(0, min_over_lap);
-	auto positions = pigeonhole_knuth_morris_pratt_search(word, left,
-			int(err_rate * min_over_lap));
-
-	for (int pos : positions) {
-		auto total_allowed_error = std::min(left.length() - pos + 1,
-				right.length()) * err_rate;
-		int err_cnt = 0;
-		for (int j = 0, i = pos; i < left.length() && j < right.length();
-				i++, j++) {
-			if (left[i] != right[j]) {
-				err_cnt++;
-			}
-			if (err_cnt > total_allowed_error) {
-				break;
-			}
-		}
-		if (err_cnt <= total_allowed_error) {
-			if (false) {
-				cout << left.length() << " " << right.length() << " " << pos
-						<< " " << left.length() - pos + 1 << endl;
-				overlap_print(left, right, pos);
-			}
-			return pos;
-		}
-	}
-	return -1;
-}
-
-//return the alignment index in the left string
-int sequence_overlap(const string &seq1, const string &seq2, int min_over_lap,
-		float err_rate) {
-
-	int max_overlap = -1;
-	string rcseq1 = reverse_complement(seq1);
-	int pos = -1;
-	if (1) {
-		string &left = (string&) seq1;
-		string &right = (string&) seq2;
-		pos = left_right_overlap(left, right, min_over_lap, err_rate);
-
-		if (pos >= 0) {
-			max_overlap = std::max(max_overlap,
-					std::min((int) left.length() - pos - 1,
-							(int) right.length()));
-		}
-	}
-
-	if (1) {
-		string &left = (string&) seq2;
-		string &right = (string&) seq1;
-
-		pos = left_right_overlap(left, right, min_over_lap, err_rate);
-
-		if (pos >= 0) {
-			max_overlap = std::max(max_overlap,
-					std::min((int) left.length() - pos - 1,
-							(int) right.length()));
-		}
-	}
-
-	if (1) {
-		string &left = (string&) rcseq1;
-		string &right = (string&) seq2;
-
-		pos = left_right_overlap(left, right, min_over_lap, err_rate);
-
-		if (pos >= 0) {
-			max_overlap = std::max(max_overlap,
-					std::min((int) left.length() - pos + 1,
-							(int) right.length()));
-		}
-	}
-	if (1) {
-		string &left = (string&) seq2;
-		string &right = (string&) rcseq1;
-
-		pos = left_right_overlap(left, right, min_over_lap, err_rate);
-
-		if (pos >= 0) {
-			max_overlap = std::max(max_overlap,
-					std::min((int) left.length() - pos - 1,
-							(int) right.length()));
-		}
-	}
-	return max_overlap;
-}
-
 /*
  * combination functions
  */
@@ -416,8 +207,8 @@ int sequence_overlap(const string &seq1, const string &seq2, int min_over_lap,
  r ---> Size of a combination to be printed
  from https://ideone.com/ywsqBz
  */
-void combinationUtil(uint32_t arr[], uint32_t data[], int start, int end, int index,
-		std::vector<std::pair<uint32_t, uint32_t>> &results) {
+void combinationUtil(uint32_t arr[], uint32_t data[], int start, int end,
+		int index, std::vector<std::pair<uint32_t, uint32_t>> &results) {
 	int r = 2;
 	// Current combination is ready to be printed, print it
 	if (index == r) {
@@ -461,15 +252,15 @@ inline void random_choice(uint32_t *arr, int n, uint32_t *data, int m) {
 		data[i] = arr[rand() % n];
 }
 //assume reads has no duplicates.
-std::vector<std::pair<uint32_t, uint32_t> > generate_edges(std::vector<uint32_t> &reads,
-		int max_degree) {
+std::vector<std::pair<uint32_t, uint32_t> > generate_edges(
+		std::vector<uint32_t> &reads, size_t max_degree) {
 	if (reads.size() <= max_degree) {
 
-		std::vector < std::pair<uint32_t, uint32_t> > results;
+		std::vector<std::pair<uint32_t, uint32_t> > results;
 		make_combination2(reads, results);
 		return results;
 	} else {
-		std::vector < std::pair<uint32_t, uint32_t> > results;
+		std::vector<std::pair<uint32_t, uint32_t> > results;
 		int m = ceil(max_degree / 2.0 * reads.size());
 		uint32_t d1[m], d2[m];
 		random_choice(reads.data(), reads.size(), d1, m);
@@ -604,7 +395,7 @@ string kmer_to_base64(const string &kmer) {
 	}
 	unsigned char bytes[size + 1];
 
-	for (int i = 0; i < kmer.size(); i += 4) {
+	for (size_t i = 0; i < kmer.size(); i += 4) {
 		int a = 0, b = 0, c = 0, d = 0;
 		a = dnabase_encoding[kmer.at(i)];
 		if (i + 1 < kmer.size()) {

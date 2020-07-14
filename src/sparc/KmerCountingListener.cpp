@@ -19,7 +19,7 @@ using namespace std;
 KmerCountingListener::KmerCountingListener(const std::string &hostname,
 		int port, const std::string &dbpath, DBHelper::DBTYPE dbtype) :
 		hostname(hostname), port(port), going_stop(false), thread_id(0), thread_stopped(
-				true), dbpath(dbpath), dbhelper(NULL), dbtype(DBHelper::MEMORY_DB), n_recv(
+				true), dbpath(dbpath), dbhelper(NULL), dbtype(dbtype), n_recv(
 				0) {
 
 }
@@ -59,7 +59,7 @@ void* KmerCountingListener::thread_run(void *vargp) {
 		size_t N;
 		message >> N;
 		//cout << "inc " << N << endl;
-		for (int i = 0; i < N; i++) {
+		for (size_t i = 0; i < N; i++) {
 			string text;
 			message >> text;
 			dbhelper.incr(text);

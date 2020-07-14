@@ -98,8 +98,7 @@ void check_arg(argagg::parser_results &args, char *name) {
 
 }
 
-int run(const std::vector<std::string> &input, const string &outputpath,
-		Config &config);
+int run(const std::vector<std::string> &input, Config &config);
 
 int main(int argc, char **argv) {
 	int rank, size;
@@ -246,13 +245,13 @@ int main(int argc, char **argv) {
 		}
 	}
 	std::vector<std::string> myinput;
-	for (int i = 0; i < input.size(); i++) {
-		if (i % size == rank) {
+	for (size_t i = 0; i < input.size(); i++) {
+		if ( (int) (i % size) == rank) {
 			myinput.push_back(input.at(i));
 		}
 	}
 	myinfo("#of my inputs = %ld", myinput.size());
-	run(myinput, outputpath, config);
+	run(myinput, config);
 	MPI_Finalize();
 
 	return 0;
@@ -287,8 +286,7 @@ void get_peers_information(Config &config) {
 
 }
 
-int run(const std::vector<std::string> &input, const string &outputpath,
-		Config &config) {
+int run(const std::vector<std::string> &input, Config &config) {
 	if (config.rank == 0) {
 		config.print();
 	}
@@ -311,7 +309,7 @@ int run(const std::vector<std::string> &input, const string &outputpath,
 		MPI_Abort( MPI_COMM_WORLD, -1);
 	}
 
-	for (int i = 0; i < input.size(); i++) {
+	for (size_t i = 0; i < input.size(); i++) {
 		myinfo("processing %s", input.at(i).c_str());
 		client.process_seq_file(input.at(i), config.kmer_length,
 				config.without_canonical_kmer);

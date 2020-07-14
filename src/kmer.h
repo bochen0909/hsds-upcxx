@@ -22,22 +22,8 @@ string canonical_kmer(const string& seq);
 
 string reverse_complement(const string& seq);
 
-void kmpSearch(const string& word, const string& text,
-		std::vector<int>& positions);
-
-std::vector<int> pigeonhole_knuth_morris_pratt_search(const string& longword,
-		const string& text, int n_err_allowed);
-
-int left_right_overlap(const string& left, const string& right,
-		int min_over_lap, float err_rate);
-
-int sequence_overlap(const string& seq1, const string& seq2, int min_over_lap,
-		float err_rate);
-
-void overlap_print(const string& left, const string& right, int pos);
-
 std::vector<std::pair<uint32_t, uint32_t> > generate_edges(std::vector<uint32_t>& reads,
-		int max_degree);
+		size_t max_degree);
 
 uint32_t fnv_hash(const std::string& str);
 

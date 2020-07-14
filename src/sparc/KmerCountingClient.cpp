@@ -28,7 +28,7 @@ KmerCountingClient::~KmerCountingClient() {
 }
 
 int KmerCountingClient::stop() {
-	for (int i = 0; i < peers.size(); i++) {
+	for (size_t i = 0; i < peers.size(); i++) {
 		peers[i]->close();
 		delete peers[i];
 	}
@@ -45,7 +45,7 @@ uint64_t KmerCountingClient::get_n_sent(){
 int KmerCountingClient::start() {
 	n_send=0;
 	context = new zmqpp::context();
-	for (int i = 0; i < peers_ports.size(); i++) {
+	for (size_t i = 0; i < peers_ports.size(); i++) {
 
 		int port = peers_ports.at(i);
 		string hostname = peers_hosts.at(i);
@@ -64,7 +64,7 @@ int KmerCountingClient::start() {
 void KmerCountingClient::send_kmers(const std::vector<string> &kmers) {
 	std::map<int, std::vector<string>> kmermap;
 	size_t npeers = peers.size();
-	for (int i = 0; i < kmers.size(); i++) {
+	for (size_t i = 0; i < kmers.size(); i++) {
 		const string &s = kmers.at(i);
 		kmermap[hash_string(s) % npeers].push_back(s);
 	}
@@ -76,7 +76,7 @@ void KmerCountingClient::send_kmers(const std::vector<string> &kmers) {
 		size_t N =it->second.size();
 		//cout << "send " << N << endl;
 		message << N;
-		for (int i = 0; i < N; i++) {
+		for (size_t i = 0; i < N; i++) {
 			message << it->second.at(i);
 			++n_send;
 		}
@@ -106,7 +106,7 @@ void KmerCountingClient::map_line(const string &line, int kmer_length,
 
 	std::vector<std::string> v = generate_kmer(seq, kmer_length, 'N',
 			!without_canonical_kmer);
-	for (int i = 0; i < v.size(); i++) {
+	for (size_t i = 0; i < v.size(); i++) {
 		kmers.push_back(kmer_to_base64(v[i]));
 	}
 }

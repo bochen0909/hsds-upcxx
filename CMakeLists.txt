@@ -14,7 +14,7 @@ endif()
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g -ggdb")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -s")
 
 
 option(BUILD_SPARC_MIMIR "build Mimir version of Sparc" ON)

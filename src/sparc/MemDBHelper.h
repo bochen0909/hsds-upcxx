@@ -9,20 +9,23 @@
 #define SUBPROJECTS__SPARC_MPI_SRC_SPARC_MEMDBHELPER_H_
 
 #include <map>
+#include <unordered_map>
 #include <string>
 #include <fstream>
 #include <gzstream.h>
+#include "robin_hood.h"
 #include "utils.h"
 #include "log.h"
 
 #include "DBHelper.h"
 template<typename K, typename V>
-using MapIterator = typename std::map<K,V>::const_iterator;
+using MapIterator = typename robin_hood::unordered_map<K,V>::const_iterator;
 
 template<typename K, typename V> class MemDBHelper: public DBHelper {
 public:
 	MemDBHelper() :
 			DBHelper(false) {
+		store.reserve(2*1024*1024);
 	}
 	int create() {
 		return 0;
@@ -81,7 +84,7 @@ public:
 	}
 
 private:
-	std::map<K, V> store;
+	robin_hood::unordered_map<K, V> store;
 
 };
 

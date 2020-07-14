@@ -18,7 +18,7 @@
 #include <mpi.h>
 
 #include "argagg.hpp"
-#include "utils.h"
+#include "sparc/utils.h"
 #include "kmer.h"
 
 using namespace std;

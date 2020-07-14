@@ -8,6 +8,14 @@ set(CMAKE_STANDARD_REQUIRED True)
 set (CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -ggdb")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+
 
 option(BUILD_SPARC_MIMIR "build Mimir version of Sparc" ON)
 option(BUILD_SPARC_MRMPI "build MR-MPI version of Sparc" ON)
@@ -43,17 +51,29 @@ ExternalProject_Add(mimirlib
 )
 set_target_properties(mimirlib PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
-ExternalProject_Add(gzstream
+ExternalProject_Add(gzstreamlib
   PREFIX ${PROJECT_SOURCE_DIR}/extlib
   URL ${PROJECT_SOURCE_DIR}/extlib/gzstream.tgz
   INSTALL_DIR ${LOCAL_EXT_PREFIX_DIR}
   BUILD_IN_SOURCE 1
   CONFIGURE_COMMAND  "" 
   BUILD_COMMAND  make 
-  INSTALL_COMMAND  "" 
+  INSTALL_COMMAND  cp gzstream.h <INSTALL_DIR>/include && cp libgzstream.a <INSTALL_DIR>/lib
   )
-set_target_properties(gzstream PROPERTIES EXCLUDE_FROM_ALL TRUE)
+set_target_properties(gzstreamlib PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
+
+ExternalProject_Add(spdloglib
+  PREFIX ${PROJECT_SOURCE_DIR}/extlib
+  GIT_REPOSITORY https://github.com/gabime/spdlog.git
+  GIT_TAG v1.7.0
+  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
+  BUILD_IN_SOURCE 1
+  CONFIGURE_COMMAND  "" 
+  BUILD_COMMAND  mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>  ..  
+  INSTALL_COMMAND  cd build && make install 
+  )
+set_target_properties(spdloglib PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 ExternalProject_Add(libzmq
   PREFIX ${PROJECT_SOURCE_DIR}/extlib
@@ -95,7 +115,7 @@ ExternalProject_Add(zmqpplib
   )
 set_target_properties(zmqpplib PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
-ExternalProject_Add(snappy
+ExternalProject_Add(snappylib
   PREFIX ${PROJECT_SOURCE_DIR}/extlib
   GIT_REPOSITORY https://github.com/google/snappy.git
   GIT_TAG 1.1.8
@@ -105,10 +125,39 @@ ExternalProject_Add(snappy
   BUILD_COMMAND  mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> .. && make 
   INSTALL_COMMAND  cd build && make install 
   )
-set_target_properties(snappy PROPERTIES EXCLUDE_FROM_ALL TRUE)
+set_target_properties(snappylib PROPERTIES EXCLUDE_FROM_ALL TRUE)
   
+ExternalProject_Add(lz4lib
+  PREFIX ${PROJECT_SOURCE_DIR}/extlib
+  GIT_REPOSITORY https://github.com/lz4/lz4.git
+  GIT_TAG v1.9.2
+  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
+  BUILD_IN_SOURCE 1
+  CONFIGURE_COMMAND  "" 
+  BUILD_COMMAND  ""  
+  INSTALL_COMMAND  cd lib && make install BUILD_SHARED=no PREFIX=<INSTALL_DIR> 
+  )
+set_target_properties(lz4lib PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
+ExternalProject_Add(rocksdblib
+  DEPENDS lz4lib snappylib
+  PREFIX ${PROJECT_SOURCE_DIR}/extlib
+  URL_MD5 f1c5debbb2bdaaf275309e1d78839fb2
+  URL  https://github.com/facebook/rocksdb/archive/v6.10.2.tar.gz
+  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
+  BUILD_IN_SOURCE 1
+  CONFIGURE_COMMAND  "" 
+  BUILD_COMMAND
+  test -f DONE ||  
+  ROCKSDB_DISABLE_BZIP=1 ROCKSDB_DISABLE_ZLIB=1 
+  CFLAGS=-I<INSTALL_DIR>/include PLATFORM_LDFLAGS=-L<INSTALL_DIR>/lib
+  make static_lib AM_DEFAULT_VERBOSITY=1 -j4 && touch DONE
+  INSTALL_COMMAND  test -f DONE2 || make install-static INSTALL_PATH=<INSTALL_DIR> && touch DONE2 
+  )
+set_target_properties(rocksdblib PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
 ExternalProject_Add(leveldblib
-  DEPENDS snappy
+  DEPENDS snappylib
   PREFIX ${PROJECT_SOURCE_DIR}/extlib
   GIT_REPOSITORY https://github.com/google/leveldb.git
   GIT_TAG 1.22
@@ -153,9 +202,9 @@ if(BUILD_SPARC_MRMPI)
 	
 	link_directories( "${LOCAL_EXT_PREFIX_DIR}/lib" )
 	
-	add_executable(kmer_counting_mrmpi src/kmer_counting_mrmpi.cpp src/kmer.cpp)
-	add_executable(kmer_read_mapping_mrmpi src/kmer_read_mapping_mrmpi.cpp src/kmer.cpp)
-	add_executable(edge_generating_mrmpi src/edge_generating_mrmpi.cpp src/kmer.cpp)
+	add_executable(kmer_counting_mrmpi src/kmer_counting_mrmpi.cpp src/kmer.cpp src/sparc/utils.cpp)
+	add_executable(kmer_read_mapping_mrmpi src/kmer_read_mapping_mrmpi.cpp src/kmer.cpp src/sparc/utils.cpp)
+	add_executable(edge_generating_mrmpi src/edge_generating_mrmpi.cpp src/kmer.cpp src/sparc/utils.cpp)
 
 	foreach(EXEC kmer_counting_mrmpi kmer_read_mapping_mrmpi edge_generating_mrmpi)
 		add_dependencies(${EXEC} mrmpilib)
@@ -176,9 +225,10 @@ if(BUILD_SPARC_MIMIR)
 	
 	link_directories( "${LOCAL_EXT_PREFIX_DIR}/lib" )
 	
-	add_executable(kmer_counting_mimir src/kmer_counting_mimir.cpp src/kmer.cpp)
-	add_executable(kmer_read_mapping_mimir src/kmer_read_mapping_mimir.cpp src/kmer.cpp)
-	add_executable(edge_generating_mimir src/edge_generating_mimir.cpp src/kmer.cpp)
+	add_executable(kmer_counting_mimir src/kmer_counting_mimir.cpp src/kmer.cpp src/sparc/utils.cpp)
+	add_executable(kmer_read_mapping_mimir src/kmer_read_mapping_mimir.cpp src/kmer.cpp src/sparc/utils.cpp)
+	add_executable(edge_generating_mimir src/edge_generating_mimir.cpp src/kmer.cpp src/sparc/utils.cpp)
+	
 	foreach(EXEC kmer_counting_mimir kmer_read_mapping_mimir edge_generating_mimir)
 		add_dependencies(${EXEC} mimirlib)
 		target_include_directories(${EXEC} PUBLIC "${LOCAL_EXT_PREFIX_DIR}/include" )
@@ -194,16 +244,29 @@ endif()
 ############# mpi programs ###########################
 if(BUILD_SPARC_MIMIR)
 	find_package(MPI 3.0 REQUIRED)
-	
+	find_package(ZLIB REQUIRED)
+	find_package(Threads REQUIRED)
+
 	link_directories( "${LOCAL_EXT_PREFIX_DIR}/lib" )
 	
-	add_executable(edge_generating_mpi src/edge_generating_mpi.cpp src/kmer.cpp)
+	add_executable(kmer_counting_mpi 
+		src/kmer_counting_mpi.cpp 
+		src/kmer.cpp src/sparc/log.cpp 
+		src/sparc/KmerCountingListener.cpp
+		src/sparc/KmerCountingClient.cpp
+		src/sparc/DBHelper.cpp
+		src/sparc/DBHelper.cpp
+		src/sparc/LevelDBHelper.cpp
+		src/sparc/RocksDBHelper.cpp
+		src/sparc/utils.cpp
+		)	
+	add_executable(edge_generating_mpi src/edge_generating_mpi.cpp src/kmer.cpp src/sparc/utils.cpp )
 
-	foreach(EXEC edge_generating_mpi)
-		add_dependencies(${EXEC} leveldblib cppzmqlib zmqpplib)
+	foreach(EXEC kmer_counting_mpi edge_generating_mpi)
+		add_dependencies(${EXEC} leveldblib cppzmqlib zmqpplib spdloglib gzstreamlib rocksdblib)
 		target_include_directories(${EXEC} PUBLIC "${LOCAL_EXT_PREFIX_DIR}/include" )
 		target_include_directories(${EXEC} PUBLIC "${MPI_CXX_INCLUDE_DIRS}" )
-		target_link_libraries(${EXEC} PUBLIC zmq leveldb)
+		target_link_libraries(${EXEC} PUBLIC zmq zmqpp leveldb rocksdb snappy lz4 spdlog gzstream ZLIB::ZLIB Threads::Threads dl)
 	    target_link_libraries(${EXEC} PUBLIC ${MPI_CXX_LIBRARIES})
 	    set_target_properties(${EXEC} PROPERTIES EXCLUDE_FROM_ALL TRUE)
 	    add_dependencies(sparc_mpi ${EXEC})

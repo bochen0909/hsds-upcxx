@@ -7,10 +7,10 @@
 #include <cstdlib>
 #include <string>
 #include <iostream>
+#include <fstream>
 #include <unistd.h>
-
 #include "argagg.hpp"
-#include "utils.h"
+#include "sparc/utils.h"
 #include "kmer.h"
 
 #include "mapreduce.h"
@@ -156,11 +156,7 @@ inline void process_line(const std::string &line, KeyValue *kv) {
 }
 
 void fileread(int itask, char *fname, KeyValue *kv, void *ptr) {
-	// filesize = # of bytes in file
-
-	struct stat stbuf;
-	int flag = stat(fname, &stbuf);
-	if (flag < 0) {
+	if (!file_exists(fname)) {
 		printf("ERROR: Could not query file size\n");
 		MPI_Abort(MPI_COMM_WORLD, 1);
 	}
@@ -225,7 +221,7 @@ int run(const std::string &input, const string &outputpath, int rank,
 	mr->verbosity = mrverbosity;
 	mr->timer = mrtimer;
 
-	MPI_Barrier (MPI_COMM_WORLD);
+	MPI_Barrier(MPI_COMM_WORLD);
 	double tstart = MPI_Wtime();
 
 	char *inputs[2] = { (char*) input.c_str() };
@@ -234,8 +230,7 @@ int run(const std::string &input, const string &outputpath, int rank,
 	mr->collate(NULL);
 	int nunique = mr->reduce(sum, NULL);
 
-
-	mr->write_str_int((char*) (outputpath+"/part").c_str());
+	mr->write_str_int((char*) (outputpath + "/part").c_str());
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	double tstop = MPI_Wtime();

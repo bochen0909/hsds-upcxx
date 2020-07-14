@@ -1,12 +1,11 @@
 /*
- * utils.h
+ * utils.cpp
  *
  *  Created on: May 16, 2020
  *      Author:
  */
 
-#ifndef UTILS_H_
-#define UTILS_H_
+#include "utils.h"
 
 #include <string>
 #include <sstream>
@@ -21,14 +20,50 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 namespace sparc {
-static inline std::string int2str(int i) {
+
+std::string get_working_dir() {
+	char buff[FILENAME_MAX];
+	getcwd(buff, FILENAME_MAX);
+	return buff;
+
+}
+
+std::string get_hostname() {
+	int name_len;
+	char hostname[1024];
+	hostname[1023] = '\0';
+	gethostname(hostname, 1023);
+	return hostname;
+}
+
+bool endswith(std::string const &fullString, std::string const &ending) {
+	if (fullString.length() >= ending.length()) {
+		return (0
+				== fullString.compare(fullString.length() - ending.length(),
+						ending.length(), ending));
+	} else {
+		return false;
+	}
+}
+
+std::string int2str(int i) {
 	return std::to_string(i);
 }
 
-static inline int str2int(const std::string str) {
+int str2int(const std::string str) {
 	return std::stoi(str);
+}
+
+bool path_exists(const std::string &s) {
+	struct stat buffer;
+	return (stat(s.c_str(), &buffer) == 0);
 }
 
 bool file_exists(const char *filename) {
@@ -59,7 +94,7 @@ int make_dir(const char *path) {
 }
 
 std::vector<std::string> list_dir(const char *path) {
-	std::vector < std::string > ret;
+	std::vector<std::string> ret;
 	std::string strpath = path;
 	DIR *dir;
 	struct dirent *ent;
@@ -77,40 +112,49 @@ std::vector<std::string> list_dir(const char *path) {
 
 	return ret;
 }
+
+uint32_t hash_string(const std::string &s) {
+	uint32_t h = 0;
+	for (int i = 0; i < s.length(); i++) {
+		h += s.at(i);
+	}
+	return h;
+}
+
 // trim from start (in place)
-static inline void ltrim(std::string &s) {
+inline void ltrim(std::string &s) {
 	s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
 		return !std::isspace(ch);
 	}));
 }
 
 // trim from end (in place)
-static inline void rtrim(std::string &s) {
+inline void rtrim(std::string &s) {
 	s.erase(std::find_if(s.rbegin(), s.rend(), [](int ch) {
 		return !std::isspace(ch);
 	}).base(), s.end());
 }
 
 // trim from both ends (in place)
-static inline void trim(std::string &s) {
+void trim(std::string &s) {
 	ltrim(s);
 	rtrim(s);
 }
 
 // trim from start (copying)
-static inline std::string ltrim_copy(std::string s) {
+std::string ltrim_copy(std::string s) {
 	ltrim(s);
 	return s;
 }
 
 // trim from end (copying)
-static inline std::string rtrim_copy(std::string s) {
+std::string rtrim_copy(std::string s) {
 	rtrim(s);
 	return s;
 }
 
 // trim from both ends (copying)
-static inline std::string trim_copy(std::string s) {
+std::string trim_copy(std::string s) {
 	trim(s);
 	return s;
 }
@@ -118,7 +162,7 @@ static inline std::string trim_copy(std::string s) {
 std::vector<std::string> split(std::string str, std::string sep) {
 	char *cstr = const_cast<char*>(str.c_str());
 	char *current;
-	std::vector < std::string > arr;
+	std::vector<std::string> arr;
 	current = strtok(cstr, sep.c_str());
 	while (current != NULL) {
 		arr.push_back(current);
@@ -127,6 +171,19 @@ std::vector<std::string> split(std::string str, std::string sep) {
 	return arr;
 }
 
+std::string get_ip_adderss() {
+	return get_ip_adderss(get_hostname());
+}
+
+std::string get_ip_adderss(const std::string &hostname) {
+	struct hostent *host_entry;
+	char *IPbuffer;
+
+	host_entry = gethostbyname(hostname.c_str());
+
+	IPbuffer = inet_ntoa(*((struct in_addr*) host_entry->h_addr_list[0]));
+
+	return IPbuffer;
+}
 
 }
-#endif /* UTILS_H_ */

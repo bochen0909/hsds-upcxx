@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 #include "argagg.hpp"
-#include "utils.h"
+#include "sparc/utils.h"
 #include "kmer.h"
 
 #include "mimir.h"

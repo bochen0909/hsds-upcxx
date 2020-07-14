@@ -45,8 +45,8 @@ ExternalProject_Add(mimirlib
   SOURCE_DIR ${PROJECT_SOURCE_DIR}/extlib/Mimir/
   INSTALL_DIR ${LOCAL_EXT_PREFIX_DIR}
   BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND  "" 
-  BUILD_COMMAND  make 
+  CONFIGURE_COMMAND  ./autogen.sh 
+  BUILD_COMMAND  ./configure --prefix <INSTALL_DIR> && make 
   INSTALL_COMMAND  make install
 )
 set_target_properties(mimirlib PROPERTIES EXCLUDE_FROM_ALL TRUE)
@@ -168,9 +168,12 @@ ExternalProject_Add(leveldblib
   BUILD_COMMAND  
   mkdir -p build && cd build && 
   cmake -DCMAKE_BUILD_TYPE=Release
+  -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+  -DCMAKE_CC_COMPILER=${CMAKE_CC_COMPILER}
   -DLEVELDB_BUILD_TESTS=OFF
   -DLEVELDB_BUILD_BENCHMARKS=OFF
   -DLOCAL_PREFIX_PATH=<INSTALL_DIR>
+  -DCMAKE_EXE_LINKER_FLAGS=-L<INSTALL_DIR>/lib64
   -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> .. && make 
   INSTALL_COMMAND  cd build && make install 
   )
@@ -248,6 +251,7 @@ if(BUILD_SPARC_MIMIR)
 	find_package(Threads REQUIRED)
 
 	link_directories( "${LOCAL_EXT_PREFIX_DIR}/lib" )
+	link_directories( "${LOCAL_EXT_PREFIX_DIR}/lib64" )
 	
 	add_executable(kmer_counting_mpi 
 		src/kmer_counting_mpi.cpp 
@@ -263,7 +267,7 @@ if(BUILD_SPARC_MIMIR)
 	add_executable(edge_generating_mpi src/edge_generating_mpi.cpp src/kmer.cpp src/sparc/utils.cpp )
 
 	foreach(EXEC kmer_counting_mpi edge_generating_mpi)
-		add_dependencies(${EXEC} leveldblib cppzmqlib zmqpplib spdloglib gzstreamlib rocksdblib)
+		add_dependencies(${EXEC} leveldblib zmqpplib spdloglib gzstreamlib rocksdblib)
 		target_include_directories(${EXEC} PUBLIC "${LOCAL_EXT_PREFIX_DIR}/include" )
 		target_include_directories(${EXEC} PUBLIC "${MPI_CXX_INCLUDE_DIRS}" )
 		target_link_libraries(${EXEC} PUBLIC zmq zmqpp leveldb  rocksdb snappy lz4 spdlog gzstream ZLIB::ZLIB Threads::Threads dl)

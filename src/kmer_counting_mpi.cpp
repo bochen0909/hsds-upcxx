@@ -181,6 +181,7 @@ int main(int argc, char **argv) {
 			config.dbtype = DBHelper::LEVEL_DB;
 		} else if (dbtype == "rocksdb") {
 			config.dbtype = DBHelper::ROCKS_DB;
+			cerr << "rocksdb was removed due to always coredump" << endl;
 		} else {
 			cerr << "Error, unknown dbtype:  " << dbtype << endl;
 			return EXIT_FAILURE;

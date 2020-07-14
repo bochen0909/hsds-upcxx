@@ -11,7 +11,7 @@
 #include "DBHelper.h"
 #include "LevelDBHelper.h"
 #include "MemDBHelper.h"
-#include "RocksDBHelper.h"
+//#include "RocksDBHelper.h"
 #include "KmerCountingListener.h"
 
 using namespace std;
@@ -93,7 +93,8 @@ int KmerCountingListener::start() {
 	if (dbtype==DBHelper::LEVEL_DB) {
 		dbhelper = new LevelDBHelper(dbpath);
 	} else if (dbtype==DBHelper::ROCKS_DB) {
-		dbhelper = new RocksDBHelper(dbpath);
+		//dbhelper = new RocksDBHelper(dbpath);
+		throw  std::runtime_error("rocksdb was removed due to always coredump");
 	} else{
 		dbhelper = new MemDBHelper<std::string, uint32_t>();
 	}

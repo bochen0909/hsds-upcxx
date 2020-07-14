@@ -77,6 +77,7 @@ int RocksDBHelper::create() {
 	rocksdb::DB *db = 0;
 	opts.create_if_missing = true;
 
+	if (0) {
 	opts.max_open_files = 300000;
 	opts.write_buffer_size = 67108864;
 	opts.max_write_buffer_number = 3;
@@ -87,6 +88,7 @@ int RocksDBHelper::create() {
 	table_options.block_cache = rocksdb::NewLRUCache(2147483648);
 	table_options.block_cache_compressed = rocksdb::NewLRUCache(524288000);
 	opts.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
+	}
 	rocksdb::Status status = rocksdb::DB::Open(opts, dbpath, &db);
 
 	return status.ok() ? 0 : 1;

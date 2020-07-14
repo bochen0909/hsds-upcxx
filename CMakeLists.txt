@@ -142,8 +142,8 @@ set_target_properties(lz4lib PROPERTIES EXCLUDE_FROM_ALL TRUE)
 ExternalProject_Add(rocksdblib
   DEPENDS lz4lib snappylib
   PREFIX ${PROJECT_SOURCE_DIR}/extlib
-  URL_MD5 f1c5debbb2bdaaf275309e1d78839fb2
   URL  https://github.com/facebook/rocksdb/archive/v6.10.2.tar.gz
+  URL_MD5 f1c5debbb2bdaaf275309e1d78839fb2
   INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
   BUILD_IN_SOURCE 1
   CONFIGURE_COMMAND  "" 
@@ -259,18 +259,17 @@ if(BUILD_SPARC_MIMIR)
 		src/sparc/KmerCountingListener.cpp
 		src/sparc/KmerCountingClient.cpp
 		src/sparc/DBHelper.cpp
-		src/sparc/DBHelper.cpp
 		src/sparc/LevelDBHelper.cpp
-		src/sparc/RocksDBHelper.cpp
+		#src/sparc/RocksDBHelper.cpp
 		src/sparc/utils.cpp
 		)	
 	add_executable(edge_generating_mpi src/edge_generating_mpi.cpp src/kmer.cpp src/sparc/utils.cpp )
 
 	foreach(EXEC kmer_counting_mpi edge_generating_mpi)
-		add_dependencies(${EXEC} leveldblib zmqpplib spdloglib gzstreamlib rocksdblib)
+		add_dependencies(${EXEC} leveldblib zmqpplib spdloglib gzstreamlib)
 		target_include_directories(${EXEC} PUBLIC "${LOCAL_EXT_PREFIX_DIR}/include" )
 		target_include_directories(${EXEC} PUBLIC "${MPI_CXX_INCLUDE_DIRS}" )
-		target_link_libraries(${EXEC} PUBLIC zmq zmqpp leveldb  rocksdb snappy lz4 spdlog gzstream ZLIB::ZLIB Threads::Threads dl)
+		target_link_libraries(${EXEC} PUBLIC zmq zmqpp leveldb snappy spdlog gzstream ZLIB::ZLIB Threads::Threads dl)
 	    target_link_libraries(${EXEC} PUBLIC ${MPI_CXX_LIBRARIES})
 	    set_target_properties(${EXEC} PROPERTIES EXCLUDE_FROM_ALL TRUE)
 	    add_dependencies(sparc_mpi ${EXEC})

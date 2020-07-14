@@ -1,0 +1,97 @@
+/*
+ * MemDBHelper.h
+ *
+ *  Created on: Jul 14, 2020
+ *      Author: bo
+ */
+
+#ifndef SUBPROJECTS__SPARC_MPI_SRC_SPARC_MEMDBHELPER_H_
+#define SUBPROJECTS__SPARC_MPI_SRC_SPARC_MEMDBHELPER_H_
+
+#include <map>
+#include <string>
+#include <fstream>
+#include <gzstream.h>
+#include "utils.h"
+#include "log.h"
+
+#include "DBHelper.h"
+template<typename K, typename V>
+using MapIterator = typename std::map<K,V>::const_iterator;
+
+template<typename K, typename V> class MemDBHelper: public DBHelper {
+public:
+	MemDBHelper() :
+			DBHelper(false) {
+	}
+	int create() {
+		return 0;
+	}
+	void close() {
+
+	}
+	void remove() {
+
+	}
+	virtual ~MemDBHelper() {
+
+	}
+
+	void put(const std::string &key, uint32_t val) {
+		throw -1;
+	}
+	void put(const std::string &key, const std::string &val) {
+		throw -1;
+	}
+	void incr(const std::string &key, uint32_t n = 1) {
+		throw -1;
+	}
+	void append(const std::string &key, uint32_t n) {
+		throw -1;
+	}
+	void append(const std::string &key, const std::string &val) {
+		throw -1;
+	}
+
+	int dump(const std::string &filepath, char sep = '\t') {
+		int stat = 0;
+		std::ostream *myfile_pointer = 0;
+		if (sparc::endswith(filepath, ".gz")) {
+			myfile_pointer = new ogzstream(filepath.c_str());
+
+		} else {
+			myfile_pointer = new std::ofstream(filepath.c_str());
+		}
+		std::ostream &myfile = *myfile_pointer;
+		MapIterator<K, V> it = store.begin();
+		uint64_t n = 0;
+		for (; it != store.end(); it++) {
+			myfile << it->first << sep << it->second << std::endl;
+			++n;
+		}
+		if (sparc::endswith(filepath, ".gz")) {
+			((ogzstream&) myfile).close();
+		} else {
+			((std::ofstream&) myfile).close();
+		}
+		delete myfile_pointer;
+		myinfo("Wrote %ld records", n);
+		return stat;
+
+	}
+
+private:
+	std::map<K, V> store;
+
+};
+
+template<> void MemDBHelper<std::string, uint32_t>::put(const std::string &key,
+		uint32_t n) {
+	store[key] = n;
+}
+
+template<> void MemDBHelper<std::string, uint32_t>::incr(const std::string &key,
+		uint32_t n) {
+	store[key] += n;
+}
+#endif /* SUBPROJECTS__SPARC_MPI_SRC_SPARC_MEMDBHELPER_H_ */

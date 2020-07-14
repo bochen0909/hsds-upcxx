@@ -12,6 +12,12 @@
 
 class DBHelper {
 public:
+	enum DBTYPE {
+		MEMORY_DB=0,
+		LEVEL_DB,
+		ROCKS_DB
+	};
+public:
 	DBHelper(bool readonly);
 	virtual ~DBHelper();
 

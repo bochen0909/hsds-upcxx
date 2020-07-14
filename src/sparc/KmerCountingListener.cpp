@@ -10,15 +10,16 @@
 #include "log.h"
 #include "DBHelper.h"
 #include "LevelDBHelper.h"
+#include "MemDBHelper.h"
 #include "RocksDBHelper.h"
 #include "KmerCountingListener.h"
 
 using namespace std;
 
 KmerCountingListener::KmerCountingListener(const std::string &hostname,
-		int port, const std::string &dbpath, bool use_leveldb) :
+		int port, const std::string &dbpath, DBHelper::DBTYPE dbtype) :
 		hostname(hostname), port(port), going_stop(false), thread_id(0), thread_stopped(
-				true), dbpath(dbpath), dbhelper(NULL), use_leveldb(use_leveldb), n_recv(
+				true), dbpath(dbpath), dbhelper(NULL), dbtype(DBHelper::MEMORY_DB), n_recv(
 				0) {
 
 }
@@ -89,10 +90,12 @@ int KmerCountingListener::removedb() {
 	return 0;
 }
 int KmerCountingListener::start() {
-	if (use_leveldb) {
+	if (dbtype==DBHelper::LEVEL_DB) {
 		dbhelper = new LevelDBHelper(dbpath);
-	} else {
+	} else if (dbtype==DBHelper::ROCKS_DB) {
 		dbhelper = new RocksDBHelper(dbpath);
+	} else{
+		dbhelper = new MemDBHelper<std::string, uint32_t>();
 	}
 	dbhelper->create();
 	pthread_create(&thread_id, NULL, thread_run, this);

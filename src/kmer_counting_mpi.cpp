@@ -24,6 +24,7 @@
 #include "sparc/log.h"
 #include "sparc/KmerCountingListener.h"
 #include "sparc/KmerCountingClient.h"
+#include "sparc/DBHelper.h"
 using namespace std;
 using namespace sparc;
 
@@ -38,10 +39,25 @@ struct Config {
 	int port;
 	int rank;
 	int nprocs;
-	bool use_leveldb;
+	DBHelper::DBTYPE dbtype;
 	bool zip_output;
 	std::vector<int> peers_ports;
 	std::vector<std::string> peers_hosts;
+
+	void print() {
+		myinfo("config: kmer_length=%d", kmer_length);
+		myinfo("config: canonical_kmer=%d", !without_canonical_kmer ? 1 : 0);
+		myinfo("config: zip_output=%d", zip_output ? 1 : 0);
+		myinfo("config: inputpath=%s", outputpath.c_str());
+		myinfo("config: outputpath=%s", outputpath.c_str());
+		myinfo("config: scratch_dir=%s", scratch_dir.c_str());
+		myinfo("config: dbpath=%s", get_dbpath().c_str());
+		myinfo("config: dbtype=%s",
+				dbtype == DBHelper::MEMORY_DB ?
+						"memory" :
+						(dbtype == DBHelper::LEVEL_DB ? "leveldb" : "rocksdb"));
+		myinfo("config: #procs=%d", nprocs);
+	}
 
 	std::string get_dbpath() {
 		char tmp[2048];
@@ -114,7 +130,7 @@ int main(int argc, char **argv) {
 	{ "scratch_dir", { "-s", "--scratch" },
 			"scratch dir where to put temp data", 1 },
 
-	{ "use_leveldb", { "--use-leveldb" }, "use leveldb otherwise rocksdb", 0 },
+	{ "dbtype", { "--db" }, "dbtype (leveldb,rocksdb or default memdb)", 1 },
 
 	{ "zip_output", { "-z", "--zip" }, "zip output files", 0 },
 
@@ -158,10 +174,20 @@ int main(int argc, char **argv) {
 		config.zip_output = false;
 	}
 
-	if (args["use_leveldb"]) {
-		config.use_leveldb = true;
+	if (args["dbtype"]) {
+		std::string dbtype = args["dbtype"].as<std::string>();
+		if (dbtype == "memdb") {
+			config.dbtype = DBHelper::MEMORY_DB;
+		} else if (dbtype == "leveldb") {
+			config.dbtype = DBHelper::LEVEL_DB;
+		} else if (dbtype == "rocksdb") {
+			config.dbtype = DBHelper::ROCKS_DB;
+		} else {
+			cerr << "Error, unknown dbtype:  " << dbtype << endl;
+			return EXIT_FAILURE;
+		}
 	} else {
-		config.use_leveldb = false;
+		config.dbtype = DBHelper::MEMORY_DB;
 	}
 
 	check_arg(args, (char*) "kmer_length");
@@ -239,12 +265,10 @@ void get_peers_information(Config &config) {
 		int buf;
 		if (rank == p) {
 			buf = config.get_my_port();
-			printf("[%d]: Before Bcast, buf is %d\n", rank, buf);
 		}
 
 		/* everyone calls bcast, data is taken from root and ends up in everyone's buf */
 		MPI_Bcast(&buf, 1, MPI_INT, p, MPI_COMM_WORLD);
-		printf("[%d]: After Bcast, buf is %d\n", rank, buf);
 		config.peers_ports.push_back(buf);
 	}
 
@@ -255,11 +279,9 @@ void get_peers_information(Config &config) {
 
 		if (rank == p) {
 			strcpy(buf, config.mpi_ipaddress.c_str());
-			printf("[%d]: Before Bcast, buf is %s\n", rank, buf);
 		}
 
 		MPI_Bcast(&buf, LENGTH, MPI_CHAR, p, MPI_COMM_WORLD);
-		printf("[%d]: After Bcast, buf is %s\n", rank, buf);
 		config.peers_hosts.push_back(buf);
 	}
 
@@ -267,9 +289,12 @@ void get_peers_information(Config &config) {
 
 int run(const std::vector<std::string> &input, const string &outputpath,
 		Config &config) {
+	if (config.rank == 0) {
+		config.print();
+	}
 	get_peers_information(config);
 	KmerCountingListener listener(config.mpi_ipaddress, config.get_my_port(),
-			config.get_dbpath(), config.use_leveldb);
+			config.get_dbpath(), config.dbtype);
 	myinfo("Starting listener");
 	int status = listener.start();
 	if (status != 0) {

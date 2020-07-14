@@ -75,7 +75,7 @@ int RocksDBHelper::create() {
 	myinfo("Creating database at %s", dbpath.c_str());
 	rocksdb::Options opts;
 	rocksdb::DB *db = 0;
-	opts.create_if_missing = false;
+	opts.create_if_missing = true;
 
 	opts.max_open_files = 300000;
 	opts.write_buffer_size = 67108864;

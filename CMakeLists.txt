@@ -151,7 +151,7 @@ ExternalProject_Add(rocksdblib
   test -f DONE ||  
   ROCKSDB_DISABLE_BZIP=1 ROCKSDB_DISABLE_ZLIB=1 
   CFLAGS=-I<INSTALL_DIR>/include PLATFORM_LDFLAGS=-L<INSTALL_DIR>/lib
-  make static_lib AM_DEFAULT_VERBOSITY=1 -j4 && touch DONE
+  make static_lib AM_DEFAULT_VERBOSITY=1 -j4  && touch DONE
   INSTALL_COMMAND  test -f DONE2 || make install-static INSTALL_PATH=<INSTALL_DIR> && touch DONE2 
   )
 set_target_properties(rocksdblib PROPERTIES EXCLUDE_FROM_ALL TRUE)
@@ -266,7 +266,7 @@ if(BUILD_SPARC_MIMIR)
 		add_dependencies(${EXEC} leveldblib cppzmqlib zmqpplib spdloglib gzstreamlib rocksdblib)
 		target_include_directories(${EXEC} PUBLIC "${LOCAL_EXT_PREFIX_DIR}/include" )
 		target_include_directories(${EXEC} PUBLIC "${MPI_CXX_INCLUDE_DIRS}" )
-		target_link_libraries(${EXEC} PUBLIC zmq zmqpp leveldb rocksdb snappy lz4 spdlog gzstream ZLIB::ZLIB Threads::Threads dl)
+		target_link_libraries(${EXEC} PUBLIC zmq zmqpp leveldb  rocksdb snappy lz4 spdlog gzstream ZLIB::ZLIB Threads::Threads dl)
 	    target_link_libraries(${EXEC} PUBLIC ${MPI_CXX_LIBRARIES})
 	    set_target_properties(${EXEC} PROPERTIES EXCLUDE_FROM_ALL TRUE)
 	    add_dependencies(sparc_mpi ${EXEC})

@@ -9,12 +9,11 @@
 #define SOURCE_DIRECTORY__SRC_SPARC_KMERCOUNTINGLISTENER_H_
 
 #include <string>
-
-class DBHelper;
+#include "DBHelper.h"
 
 class KmerCountingListener {
 public:
-	KmerCountingListener(const std::string& hostname, int port, const std::string& dbpath, bool use_leveldb);
+	KmerCountingListener(const std::string& hostname, int port, const std::string& dbpath,  DBHelper::DBTYPE dbtype);
 	virtual ~KmerCountingListener();
 
 	int start();
@@ -33,8 +32,9 @@ private:
 	bool thread_stopped;
 	std::string dbpath;
 	DBHelper* dbhelper;
-	bool use_leveldb;
+	DBHelper::DBTYPE dbtype;
 	uint64_t n_recv;
+
 };
 
 #endif /* SOURCE_DIRECTORY__SRC_SPARC_KMERCOUNTINGLISTENER_H_ */

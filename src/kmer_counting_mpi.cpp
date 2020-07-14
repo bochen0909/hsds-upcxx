@@ -39,6 +39,7 @@ struct Config {
 	int rank;
 	int nprocs;
 	bool use_leveldb;
+	bool zip_output;
 	std::vector<int> peers_ports;
 	std::vector<std::string> peers_hosts;
 
@@ -50,7 +51,11 @@ struct Config {
 
 	std::string get_my_output() {
 		char tmp[2048];
-		sprintf(tmp, "%s/kc_%d", outputpath.c_str(), rank);
+		if (zip_output) {
+			sprintf(tmp, "%s/kc_%d.txt.gz", outputpath.c_str(), rank);
+		} else {
+			sprintf(tmp, "%s/kc_%d.txt", outputpath.c_str(), rank);
+		}
 		return tmp;
 	}
 
@@ -111,6 +116,8 @@ int main(int argc, char **argv) {
 
 	{ "use_leveldb", { "--use-leveldb" }, "use leveldb otherwise rocksdb", 0 },
 
+	{ "zip_output", { "-z", "--zip" }, "zip output files", 0 },
+
 	{ "kmer_length", { "-k", "--kmer-length" }, "length of kmer", 1 },
 
 	{ "output", { "-o", "--output" }, "output folder", 1 },
@@ -143,6 +150,12 @@ int main(int argc, char **argv) {
 		config.without_canonical_kmer = true;
 	} else {
 		config.without_canonical_kmer = false;
+	}
+
+	if (args["zip_output"]) {
+		config.zip_output = true;
+	} else {
+		config.zip_output = false;
 	}
 
 	if (args["use_leveldb"]) {
@@ -236,16 +249,16 @@ void get_peers_information(Config &config) {
 	}
 
 	for (int p = 0; p < config.nprocs; p++) { //p:  a peer
-		char buf[2048];
-		bzero(buf, 2048);
-		int name_len;
+		int LENGTH = 256;
+		char buf[LENGTH];
+		bzero(buf, LENGTH);
 
 		if (rank == p) {
 			strcpy(buf, config.mpi_ipaddress.c_str());
 			printf("[%d]: Before Bcast, buf is %s\n", rank, buf);
 		}
 
-		MPI_Bcast(&buf, name_len, MPI_CHAR, p, MPI_COMM_WORLD);
+		MPI_Bcast(&buf, LENGTH, MPI_CHAR, p, MPI_COMM_WORLD);
 		printf("[%d]: After Bcast, buf is %s\n", rank, buf);
 		config.peers_hosts.push_back(buf);
 	}
@@ -257,6 +270,7 @@ int run(const std::vector<std::string> &input, const string &outputpath,
 	get_peers_information(config);
 	KmerCountingListener listener(config.mpi_ipaddress, config.get_my_port(),
 			config.get_dbpath(), config.use_leveldb);
+	myinfo("Starting listener");
 	int status = listener.start();
 	if (status != 0) {
 		myerror("Start listener failed.");
@@ -265,7 +279,7 @@ int run(const std::vector<std::string> &input, const string &outputpath,
 
 	//wait for all server is ready
 	MPI_Barrier(MPI_COMM_WORLD);
-
+	myinfo("Starting client");
 	KmerCountingClient client(config.peers_ports, config.peers_hosts);
 	if (client.start() != 0) {
 		myerror("Start client failed");
@@ -278,12 +292,15 @@ int run(const std::vector<std::string> &input, const string &outputpath,
 				config.without_canonical_kmer);
 	}
 
-	client.stop();
+	MPI_Barrier(MPI_COMM_WORLD);
 
+	client.stop();
+	myinfo("Total sent %ld kmers", client.get_n_sent());
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	//cleanup listener and db
 	listener.stop();
+	myinfo("Total recved %ld kmers", listener.get_n_recv());
 	listener.dumpdb(config.get_my_output());
 	listener.removedb();
 

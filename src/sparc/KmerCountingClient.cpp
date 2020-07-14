@@ -28,7 +28,6 @@ KmerCountingClient::~KmerCountingClient() {
 }
 
 int KmerCountingClient::stop() {
-	myinfo("Total sent %ld kmers", n_send);
 	for (int i = 0; i < peers.size(); i++) {
 		peers[i]->close();
 		delete peers[i];
@@ -36,11 +35,15 @@ int KmerCountingClient::stop() {
 	delete context;
 	context = NULL;
 	peers.clear();
-	n_send=0;
 	return 0;
 }
 
+uint64_t KmerCountingClient::get_n_sent(){
+	return n_send;
+}
+
 int KmerCountingClient::start() {
+	n_send=0;
 	context = new zmqpp::context();
 	for (int i = 0; i < peers_ports.size(); i++) {
 
@@ -48,7 +51,7 @@ int KmerCountingClient::start() {
 		string hostname = peers_hosts.at(i);
 		string endpoint = "tcp://" + hostname + ":" + std::to_string(port);
 
-		zmqpp::socket_type type = zmqpp::socket_type::push;
+		zmqpp::socket_type type = zmqpp::socket_type::request;
 		zmqpp::socket *socket = new zmqpp::socket(*context, type);
 
 		// bind to the socket
@@ -71,13 +74,20 @@ void KmerCountingClient::send_kmers(const std::vector<string> &kmers) {
 		zmqpp::socket *socket = peers[it->first];
 		zmqpp::message message;
 		size_t N =it->second.size();
-		cout << "send " << N << endl;
+		//cout << "send " << N << endl;
 		message << N;
 		for (int i = 0; i < N; i++) {
 			message << it->second.at(i);
 			++n_send;
 		}
 		socket->send(message);
+		zmqpp::message message2;
+		socket->receive(message2);
+		std::string reply;
+		message2 >> reply;
+		if(reply!="OK"){
+			myerror("get reply failed");
+		}
 	}
 }
 

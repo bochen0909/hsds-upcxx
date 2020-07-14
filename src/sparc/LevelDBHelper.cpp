@@ -6,6 +6,7 @@
  */
 
 #include <fstream>
+#include <gzstream.h>
 #include "utils.h"
 #include "log.h"
 #include "LevelDBHelper.h"
@@ -54,16 +55,31 @@ void LevelDBHelper::append(const std::string &key, const std::string &val) {
 
 int LevelDBHelper::dump(const std::string &filepath, char sep) {
 	int stat = 0;
-	ofstream myfile;
-	myfile.open(filepath);
+	std::ostream *myfile_pointer = 0;
+	if (endswith(filepath, ".gz")) {
+		myfile_pointer = new ogzstream(filepath.c_str());
+
+	} else {
+		myfile_pointer = new ofstream(filepath.c_str());
+	}
+	std::ostream &myfile = *myfile_pointer;
 	leveldb::Iterator *it = db->NewIterator(leveldb::ReadOptions());
+	uint64_t n = 0;
 	for (it->SeekToFirst(); it->Valid(); it->Next()) {
 		myfile << it->key().ToString() << sep << it->value().ToString() << endl;
+		++n;
 	}
 	stat = it->status().ok() ? 0 : -1;
 	delete it;
-	myfile.close();
+	if (endswith(filepath, ".gz")) {
+		((ogzstream&) myfile).close();
+	} else {
+		((ofstream&) myfile).close();
+	}
+	delete myfile_pointer;
+	myinfo("Wrote %ld records", n);
 	return stat;
+
 }
 
 int LevelDBHelper::create() {

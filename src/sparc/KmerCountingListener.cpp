@@ -32,6 +32,7 @@ KmerCountingListener::~KmerCountingListener() {
 void* KmerCountingListener::thread_run(void *vargp) {
 	KmerCountingListener &self = *(KmerCountingListener*) vargp;
 	DBHelper &dbhelper = *self.dbhelper;
+	self.n_recv = 0;
 	self.thread_stopped = false;
 	string endpoint = "tcp://" + self.hostname + ":"
 			+ std::to_string(self.port);
@@ -39,7 +40,7 @@ void* KmerCountingListener::thread_run(void *vargp) {
 	zmqpp::context context;
 
 	// generate a pull socket
-	zmqpp::socket_type type = zmqpp::socket_type::pull;
+	zmqpp::socket_type type = zmqpp::socket_type::reply;
 	zmqpp::socket socket(context, type);
 	socket.set(zmqpp::socket_option::receive_timeout, 1000);
 
@@ -51,18 +52,24 @@ void* KmerCountingListener::thread_run(void *vargp) {
 		// receive the message
 		zmqpp::message message;
 		// decompose the message
-		socket.receive(message);
+		if(!socket.receive(message)){
+			continue;
+		}
 		size_t N;
 		message >> N;
-		cout << "inc " << N << endl;
+		//cout << "inc " << N << endl;
 		for (int i = 0; i < N; i++) {
 			string text;
 			message >> text;
 			dbhelper.incr(text);
 			++self.n_recv;
 		}
+		zmqpp::message message2;
+		message2 << "OK";
+		socket.send(message2);
 	}
-	std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+
+	//std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 	socket.close();
 	self.thread_stopped = true;
 	pthread_exit(NULL);
@@ -109,12 +116,12 @@ int KmerCountingListener::stop() {
 			pthread_kill(thread_id, SIGKILL);
 		}
 		thread_id = 0;
-
-		myinfo("Total recved %ld kmers", n_recv);
-		n_recv = 0;
-
 	}
 
 	return 0;
+}
+
+uint64_t KmerCountingListener::get_n_recv(){
+	return n_recv;
 }
 

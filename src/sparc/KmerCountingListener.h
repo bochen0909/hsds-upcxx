@@ -19,7 +19,7 @@ public:
 
 	int start();
 	int stop();
-
+	uint64_t get_n_recv();
 	int removedb();
 	int dumpdb(const std::string& filepath);
 

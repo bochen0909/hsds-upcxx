@@ -113,14 +113,6 @@ std::vector<std::string> list_dir(const char *path) {
 	return ret;
 }
 
-uint32_t hash_string(const std::string &s) {
-	uint32_t h = 0;
-	for (int i = 0; i < s.length(); i++) {
-		h += s.at(i);
-	}
-	return h;
-}
-
 // trim from start (in place)
 inline void ltrim(std::string &s) {
 	s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](int ch) {
@@ -184,6 +176,30 @@ std::string get_ip_adderss(const std::string &hostname) {
 	IPbuffer = inet_ntoa(*((struct in_addr*) host_entry->h_addr_list[0]));
 
 	return IPbuffer;
+}
+
+uint32_t hash_string(const std::string &s) {
+	if (1) {
+		uint32_t h = 0;
+		const char *p = s.c_str();
+		while (*p) {
+			h += *p;
+			p++;
+		}
+		return h;
+	} else {
+#define A 54059 /* a prime */
+#define B 76963 /* another prime */
+#define C 86969 /* yet another prime */
+#define FIRSTH 37 /* also prime */
+		const char *p = s.c_str();
+		unsigned h = FIRSTH;
+		while (*p) {
+			h = (h * A) ^ (p[0] * B);
+			p++;
+		}
+		return h; // or return h % C;
+	}
 }
 
 }

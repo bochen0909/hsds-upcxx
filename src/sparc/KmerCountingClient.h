@@ -20,6 +20,7 @@ public:
 
 	int start();
 	int stop();
+	uint64_t get_n_sent();
 
 	int process_seq_file(const std::string &filepath, int kmer_length,
 			bool without_canonical_kmer);

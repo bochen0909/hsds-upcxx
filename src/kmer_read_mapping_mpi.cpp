@@ -68,10 +68,11 @@ struct Config {
 	std::string get_my_output() {
 		char tmp[2048];
 		if (zip_output) {
-			sprintf(tmp, "%s/kc_%d.txt.gz", outputpath.c_str(), rank);
+			sprintf(tmp, "%s/part_%d.txt.gz", outputpath.c_str(), rank);
 		} else {
-			sprintf(tmp, "%s/kc_%d.txt", outputpath.c_str(), rank);
+			sprintf(tmp, "%s/part_%d.txt", outputpath.c_str(), rank);
 		}
+
 		return tmp;
 	}
 

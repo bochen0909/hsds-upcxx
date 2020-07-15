@@ -140,12 +140,6 @@ int main(int argc, char **argv) {
 	{ "without_canonical_kmer", { "--without-canonical-kmer" },
 			"do not use canonical kmer", 0 },
 
-	{ "max_degree", { "--max-degree" },
-			"max_degree of a node; max_degree should be greater than 1", 1 },
-
-	{ "min_shared_kmers", { "--min-shared-kmers" },
-			"minimum number of kmers that two reads share", 1 },
-
 	} };
 
 	argagg::parser_results args;
@@ -158,6 +152,10 @@ int main(int argc, char **argv) {
 
 	if (args["help"]) {
 		std::cerr << argparser;
+		return EXIT_SUCCESS;
+	}
+	if (!args.pos.empty()) {
+		std::cerr << "no positional argument is allowed" << endl;
 		return EXIT_SUCCESS;
 	}
 

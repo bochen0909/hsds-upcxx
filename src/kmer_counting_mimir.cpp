@@ -68,6 +68,11 @@ int main(int argc, char **argv) {
 		return EXIT_SUCCESS;
 	}
 
+	if (!args.pos.empty()) {
+		std::cerr << "no positional argument is allowed" << endl;
+		return EXIT_SUCCESS;
+	}
+
 	if (args["without_canonical_kmer"]) {
 		without_canonical_kmer = true;
 	}

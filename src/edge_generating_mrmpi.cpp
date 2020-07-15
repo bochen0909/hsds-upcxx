@@ -81,6 +81,11 @@ int main(int argc, char **argv) {
 		return EXIT_SUCCESS;
 	}
 
+	if (!args.pos.empty()) {
+		std::cerr << "no positional argument is allowed" << endl;
+		return EXIT_SUCCESS;
+	}
+
 	if (args["max_degree"]) {
 		max_degree = args["max_degree"].as<int>();
 	}

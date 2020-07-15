@@ -84,9 +84,9 @@ void* KmerCountingListener::thread_run(void *vargp) {
 	pthread_exit(NULL);
 }
 
-int KmerCountingListener::dumpdb(const string &filepath) {
+int KmerCountingListener::dumpdb(const string &filepath, char sep) {
 	if (dbhelper) {
-		return dbhelper->dump(filepath);
+		return dbhelper->dump(filepath, sep);
 	}
 	return 0;
 }

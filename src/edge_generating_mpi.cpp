@@ -1,7 +1,7 @@
 /*
  * edge_generating_mpi.cpp
  *
- *  Created on: Jul 13, 2020
+ *  Created on: Jul 15, 2020
  *      Author:
  */
 
@@ -23,19 +23,19 @@
 #include "kmer.h"
 #include "sparc/log.h"
 #include "sparc/KmerCountingListener.h"
-#include "sparc/KmerCountingClient.h"
+#include "sparc/EdgeCountingClient.h"
 #include "sparc/DBHelper.h"
 using namespace std;
 using namespace sparc;
 
 struct Config {
-	bool without_canonical_kmer;
-	int kmer_length;
 	string inputpath;
 	string outputpath;
 	string scratch_dir;
 	string mpi_hostname;
 	string mpi_ipaddress;
+	size_t min_shared_kmers;
+	size_t max_degree;
 	int port;
 	int rank;
 	int nprocs;
@@ -45,8 +45,8 @@ struct Config {
 	std::vector<std::string> peers_hosts;
 
 	void print() {
-		myinfo("config: kmer_length=%d", kmer_length);
-		myinfo("config: canonical_kmer=%d", !without_canonical_kmer ? 1 : 0);
+		myinfo("config: max_degree=%ld", max_degree);
+		myinfo("config: min_shared_kmers=%ld", min_shared_kmers);
 		myinfo("config: zip_output=%d", zip_output ? 1 : 0);
 		myinfo("config: inputpath=%s", outputpath.c_str());
 		myinfo("config: outputpath=%s", outputpath.c_str());
@@ -133,12 +133,13 @@ int main(int argc, char **argv) {
 
 	{ "zip_output", { "-z", "--zip" }, "zip output files", 0 },
 
-	{ "kmer_length", { "-k", "--kmer-length" }, "length of kmer", 1 },
-
 	{ "output", { "-o", "--output" }, "output folder", 1 },
 
-	{ "without_canonical_kmer", { "--without-canonical-kmer" },
-			"do not use canonical kmer", 0 },
+	{ "max_degree", { "--max-degree" },
+			"max_degree of a node; max_degree should be greater than 1", 1 },
+
+	{ "min_shared_kmers", { "--min-shared-kmers" },
+			"minimum number of kmers that two reads share", 1 },
 
 	} };
 
@@ -160,10 +161,12 @@ int main(int argc, char **argv) {
 		return EXIT_SUCCESS;
 	}
 
-	if (args["without_canonical_kmer"]) {
-		config.without_canonical_kmer = true;
+	config.max_degree = args["max_degree"].as<int>(100);
+
+	if (args["min_shared_kmers"]) {
+		config.min_shared_kmers = args["min_shared_kmers"].as<int>();
 	} else {
-		config.without_canonical_kmer = false;
+		config.min_shared_kmers = 2;
 	}
 
 	if (args["zip_output"]) {
@@ -187,13 +190,6 @@ int main(int argc, char **argv) {
 		}
 	} else {
 		config.dbtype = DBHelper::MEMORY_DB;
-	}
-
-	check_arg(args, (char*) "kmer_length");
-	config.kmer_length = args["kmer_length"].as<int>();
-	if (config.kmer_length < 1) {
-		cerr << "Error, length of kmer :  " << config.kmer_length << endl;
-		return EXIT_FAILURE;
 	}
 
 	if (args["scratch_dir"]) {
@@ -246,7 +242,7 @@ int main(int argc, char **argv) {
 	}
 	std::vector<std::string> myinput;
 	for (size_t i = 0; i < input.size(); i++) {
-		if ( (int) (i % size) == rank) {
+		if ((int) (i % size) == rank) {
 			myinput.push_back(input.at(i));
 		}
 	}
@@ -292,7 +288,7 @@ int run(const std::vector<std::string> &input, Config &config) {
 	}
 	get_peers_information(config);
 	KmerCountingListener listener(config.mpi_ipaddress, config.get_my_port(),
-			config.get_dbpath(), config.dbtype);
+			config.get_dbpath(), config.dbtype, false);
 	myinfo("Starting listener");
 	int status = listener.start();
 	if (status != 0) {
@@ -303,7 +299,7 @@ int run(const std::vector<std::string> &input, Config &config) {
 	//wait for all server is ready
 	MPI_Barrier(MPI_COMM_WORLD);
 	myinfo("Starting client");
-	KmerCountingClient client(config.peers_ports, config.peers_hosts);
+	EdgeCountingClient client(config.peers_ports, config.peers_hosts);
 	if (client.start() != 0) {
 		myerror("Start client failed");
 		MPI_Abort( MPI_COMM_WORLD, -1);
@@ -311,8 +307,8 @@ int run(const std::vector<std::string> &input, Config &config) {
 
 	for (size_t i = 0; i < input.size(); i++) {
 		myinfo("processing %s", input.at(i).c_str());
-		client.process_seq_file(input.at(i), config.kmer_length,
-				config.without_canonical_kmer);
+		client.process_krm_file(input.at(i), config.min_shared_kmers,
+				config.max_degree);
 	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -324,7 +320,7 @@ int run(const std::vector<std::string> &input, Config &config) {
 	//cleanup listener and db
 	listener.stop();
 	myinfo("Total recved %ld kmers", listener.get_n_recv());
-	listener.dumpdb(config.get_my_output());
+	listener.dumpdb(config.get_my_output(), ' ');
 	listener.removedb();
 
 	return 0;

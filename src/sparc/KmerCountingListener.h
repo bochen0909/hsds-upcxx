@@ -22,7 +22,7 @@ public:
 	int stop();
 	uint64_t get_n_recv();
 	int removedb();
-	int dumpdb(const std::string &filepath);
+	int dumpdb(const std::string &filepath, char sep = '\t');
 
 protected:
 	static void* thread_run(void *vargp);

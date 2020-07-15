@@ -281,10 +281,11 @@ if(BUILD_SPARC_MIMIR)
 		)	
 		
 	add_executable(edge_generating_mpi 
-		src/kmer_read_mapping_mpi.cpp 
+		src/edge_generating_mpi.cpp 
 		src/kmer.cpp src/sparc/log.cpp 
 		src/sparc/KmerCountingListener.cpp
 		src/sparc/KmerCountingClient.cpp
+		src/sparc/EdgeCountingClient.cpp
 		src/sparc/DBHelper.cpp
 		src/sparc/LevelDBHelper.cpp
 		#src/sparc/RocksDBHelper.cpp

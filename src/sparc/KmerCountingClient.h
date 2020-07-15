@@ -15,20 +15,23 @@
 class KmerCountingClient {
 public:
 	KmerCountingClient(const std::vector<int> &peers_ports,
-			const std::vector<std::string> &peers_hosts,bool do_kr_mapping = false);
+			const std::vector<std::string> &peers_hosts, bool do_kr_mapping =
+					false);
 	virtual ~KmerCountingClient();
 
-	int start();
-	int stop();
-	uint64_t get_n_sent();
+	virtual int start();
+	virtual int stop();
+	virtual uint64_t get_n_sent();
 
-	int process_seq_file(const std::string &filepath, int kmer_length,
+	virtual int process_seq_file(const std::string &filepath, int kmer_length,
 			bool without_canonical_kmer);
 protected:
-	inline void map_line(const std::string &line, int kmer_length,
-			bool without_canonical_kmer, std::vector<std::string> &kmers, std::vector<uint32_t>& nodeids);
-	void send_kmers(const std::vector<string> &kmers, const std::vector<uint32_t> &nodeids);
-private:
+	inline virtual void map_line(const std::string &line, int kmer_length,
+			bool without_canonical_kmer, std::vector<std::string> &kmers,
+			std::vector<uint32_t> &nodeids);
+	virtual void send_kmers(const std::vector<std::string> &kmers,
+			const std::vector<uint32_t> &nodeids);
+protected:
 	std::vector<int> peers_ports;
 	std::vector<std::string> peers_hosts;
 	std::vector<zmqpp::socket*> peers;

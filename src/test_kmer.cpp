@@ -485,6 +485,11 @@ TEST_CASE( "combination", "[combination]" ) {
 	}
 	REQUIRE (results.size() == 6);
 
+	arr = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17};
+	results = generate_edges(arr, 300);
+	REQUIRE (results.size() == 17*16/2);
+
+
 }
 
 SECTION("partial combination") {

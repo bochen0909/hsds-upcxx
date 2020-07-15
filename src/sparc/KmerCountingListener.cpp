@@ -72,6 +72,10 @@ void* KmerCountingListener::thread_run(void *vargp) {
 			std::vector<std::string> v;
 			sparc::split(v, s, ",");
 			size_t N = std::stoul(v.at(0));
+			if(N + 1 != v.size()){
+				myerror("expected %ld items, but got %ld:\n", N-1, v.size(), s.c_str());
+				throw -1;
+			}
 			assert(N + 1 == v.size());
 			for (size_t i = 1; i < N; i++) {
 				if (self.do_kr_mapping) {

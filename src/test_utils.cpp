@@ -50,7 +50,7 @@ void test_trim(void) {
 
 void test_split(void) {
 	std::vector<std::string> v;
-	string sep = " ";
+	char *sep = " ";
 	{
 		v = split("", sep);
 		TEST_INT_EQUAL(0, v.size());

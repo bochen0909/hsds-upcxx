@@ -28,14 +28,13 @@
 
 namespace sparc {
 
-std::string get_env( const std::string & var ) {
-     const char * val = std::getenv( var.c_str() );
-     if ( val == nullptr ) { // invalid to assign nullptr to std::string
-         return "";
-     }
-     else {
-         return val;
-     }
+std::string get_env(const std::string &var) {
+	const char *val = std::getenv(var.c_str());
+	if (val == nullptr) { // invalid to assign nullptr to std::string
+		return "";
+	} else {
+		return val;
+	}
 }
 
 std::string get_working_dir() {
@@ -161,7 +160,35 @@ std::string trim_copy(std::string s) {
 	return s;
 }
 
-std::vector<std::string> split(std::string str, std::string sep) {
+
+std::vector<std::string> split(const std::string &source,
+		const char *delimiter, bool keepEmpty) {
+	std::vector<std::string> results;
+	split(results, source, delimiter, keepEmpty);
+	return results;
+}
+
+void split(std::vector<std::string> &results, const std::string &source,
+		const char *delimiter, bool keepEmpty) {
+
+	size_t prev = 0;
+	size_t next = 0;
+
+	while ((next = source.find_first_of(delimiter, prev)) != std::string::npos) {
+		if (keepEmpty || (next - prev != 0)) {
+			results.push_back(source.substr(prev, next - prev));
+		}
+		prev = next + 1;
+	}
+
+	if (prev < source.size()) {
+		results.push_back(source.substr(prev));
+	}
+
+}
+
+std::vector<std::string> split_not_thread_safe(std::string str,
+		std::string sep) {
 	char *cstr = const_cast<char*>(str.c_str());
 	char *current;
 	std::vector<std::string> arr;
@@ -173,7 +200,8 @@ std::vector<std::string> split(std::string str, std::string sep) {
 	return arr;
 }
 
-void split(std::vector<std::string>& arr, std::string str, std::string sep) {
+void split_not_thread_safe(std::vector<std::string> &arr, std::string str,
+		std::string sep) {
 	char *cstr = const_cast<char*>(str.c_str());
 	char *current;
 	current = strtok(cstr, sep.c_str());
@@ -182,7 +210,6 @@ void split(std::vector<std::string>& arr, std::string str, std::string sep) {
 		current = strtok(NULL, sep.c_str());
 	}
 }
-
 
 std::string get_ip_adderss() {
 	return get_ip_adderss(get_hostname());

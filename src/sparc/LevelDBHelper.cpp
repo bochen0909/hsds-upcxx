@@ -91,7 +91,9 @@ int LevelDBHelper::create() {
 	leveldb::Options options;
 	options.create_if_missing = true;
 	options.max_open_files = 300000;
-	options.write_buffer_size = 67108864;
+	options.write_buffer_size = 256 * 1024 * 1024;
+	options.block_size = 256 * 1024;
+	options.max_file_size = 16 * 1024 * 1024;
 	options.compression = leveldb::kSnappyCompression;
 	leveldb::Status status = leveldb::DB::Open(options, dbpath, &db);
 	return status.ok() ? 0 : 1;

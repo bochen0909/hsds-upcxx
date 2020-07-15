@@ -28,6 +28,16 @@
 
 namespace sparc {
 
+std::string get_env( const std::string & var ) {
+     const char * val = std::getenv( var.c_str() );
+     if ( val == nullptr ) { // invalid to assign nullptr to std::string
+         return "";
+     }
+     else {
+         return val;
+     }
+}
+
 std::string get_working_dir() {
 	char buff[FILENAME_MAX];
 	getcwd(buff, FILENAME_MAX);
@@ -162,6 +172,17 @@ std::vector<std::string> split(std::string str, std::string sep) {
 	}
 	return arr;
 }
+
+void split(std::vector<std::string>& arr, std::string str, std::string sep) {
+	char *cstr = const_cast<char*>(str.c_str());
+	char *current;
+	current = strtok(cstr, sep.c_str());
+	while (current != NULL) {
+		arr.push_back(current);
+		current = strtok(NULL, sep.c_str());
+	}
+}
+
 
 std::string get_ip_adderss() {
 	return get_ip_adderss(get_hostname());

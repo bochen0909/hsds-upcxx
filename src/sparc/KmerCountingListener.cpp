@@ -6,8 +6,11 @@
  */
 
 #include <signal.h>
+#include <sstream>
+#include <iostream>
 #include <zmqpp/zmqpp.hpp>
 #include "log.h"
+#include "LZ4String.h"
 #include "DBHelper.h"
 #include "LevelDBHelper.h"
 #include "MemDBHelper.h"
@@ -15,6 +18,8 @@
 #include "KmerCountingListener.h"
 
 using namespace std;
+
+extern zmqpp::message& operator>>(zmqpp::message &stream, LZ4String &other);
 
 KmerCountingListener::KmerCountingListener(const std::string &hostname,
 		int port, const std::string &dbpath, DBHelper::DBTYPE dbtype,
@@ -57,21 +62,47 @@ void* KmerCountingListener::thread_run(void *vargp) {
 		if (!socket.receive(message)) {
 			continue;
 		}
-		size_t N;
-		message >> N;
-		//cout << "inc " << N << endl;
-		for (size_t i = 0; i < N; i++) {
-			if (self.do_kr_mapping) {
-				string kmer;
-				uint32_t nodeid;
-				message >> kmer >> nodeid;
-				dbhelper.append(kmer, std::to_string(nodeid));
-			} else {
-				string kmer;
-				message >> kmer;
-				dbhelper.incr(kmer);
+		bool b_compress_message;
+		message >> b_compress_message;
+		if (b_compress_message) {
+			LZ4String lz4str;
+			message >> lz4str;
+			string s = lz4str.toString();
+			//cout << "recv " << s << endl;
+			std::vector<std::string> v;
+			sparc::split(v, s, ",");
+			size_t N = std::stoul(v.at(0));
+			assert(N + 1 == v.size());
+			for (size_t i = 1; i < N; i++) {
+				if (self.do_kr_mapping) {
+					stringstream ss(v.at(i));
+					string kmer;
+					string nodeid;
+					ss >> kmer >> nodeid;
+					dbhelper.append(kmer, nodeid);
+				} else {
+					string kmer = v.at(i);
+					dbhelper.incr(kmer);
+				}
+				++self.n_recv;
 			}
-			++self.n_recv;
+
+		} else {
+			size_t N;
+			message >> N;
+			for (size_t i = 0; i < N; i++) {
+				if (self.do_kr_mapping) {
+					string kmer;
+					uint32_t nodeid;
+					message >> kmer >> nodeid;
+					dbhelper.append(kmer, std::to_string(nodeid));
+				} else {
+					string kmer;
+					message >> kmer;
+					dbhelper.incr(kmer);
+				}
+				++self.n_recv;
+			}
 		}
 		zmqpp::message message2;
 		message2 << "OK";

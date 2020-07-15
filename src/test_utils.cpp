@@ -68,6 +68,17 @@ void test_split(void) {
 		v = split("   a\t b \t  c  \t     d \t e  ", sep);
 		TEST_INT_EQUAL(5, v.size());
 	}
+
+	sep = ",";
+	{
+		v = split("", sep);
+		TEST_INT_EQUAL(0, v.size());
+		v = split(",", sep);
+		TEST_INT_EQUAL(0, v.size());
+		v = split("123,12 313,asdsaf,,", sep);
+		TEST_INT_EQUAL(3, v.size());
+	}
+
 }
 
 TEST_LIST = { {"test_trim", test_trim},

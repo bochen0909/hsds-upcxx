@@ -4,12 +4,15 @@
  *  Created on: Jul 13, 2020
  *      Author: bo
  */
-
+#include <algorithm>
+#include <sstream>
+#include <iostream>
 #include <zmqpp/zmqpp.hpp>
 #include "gzstream.h"
 #include "log.h"
 #include "../kmer.h"
 #include "utils.h"
+#include "LZ4String.h"
 #include "KmerCountingClient.h"
 
 #define KMER_SEND_BATCH_SIZE (100*1000)
@@ -22,6 +25,22 @@ KmerCountingClient::KmerCountingClient(const std::vector<int> &peers_ports,
 		peers_ports(peers_ports), peers_hosts(peers_hosts), context(NULL), n_send(
 				0), do_kr_mapping(do_kr_mapping) {
 	assert(peers_hosts.size() == peers_ports.size());
+
+	std::string v = get_env("SPARC_COMPRESS_MESSAGE");
+	trim(v);
+	if (!v.empty()) {
+		std::transform(v.begin(), v.end(), v.begin(), [](unsigned char c) {
+			return std::tolower(c);
+		});
+
+		if (v == "yes" || v == "true" || v == "on" || v == "1") {
+			b_compress_message = true;
+		}
+	}
+
+	if (b_compress_message) {
+		myinfo("Use lz4 to compress network message.");
+	}
 }
 
 KmerCountingClient::~KmerCountingClient() {
@@ -80,22 +99,47 @@ void KmerCountingClient::send_kmers(const std::vector<string> &kmers,
 			it != kmermap.end(); it++) {
 		zmqpp::socket *socket = peers[it->first];
 		zmqpp::message message;
-		size_t N = it->second.size();
-		message << N;
+		message << b_compress_message;
+		if (b_compress_message) {
+			stringstream ss;
+			char deli = ',';
+			size_t N = it->second.size();
+			ss << N << deli;
 
-		if (do_kr_mapping) {
-			std::vector<uint32_t> &v = nodeidmap.at(it->first);
-			for (size_t i = 0; i < N; i++) {
-				message << it->second.at(i) << v.at(i);
-				++n_send;
+			if (do_kr_mapping) {
+				std::vector<uint32_t> &v = nodeidmap.at(it->first);
+				for (size_t i = 0; i < N; i++) {
+					ss << it->second.at(i) << " " << v.at(i) << deli;
+					++n_send;
+				}
+			} else {
+				for (size_t i = 0; i < N; i++) {
+					ss << it->second.at(i) << deli;
+					++n_send;
+				}
 			}
+			std::string s = ss.str();
+			//cout << "send " << s << endl;
+			LZ4String lz4str(s);
+			message << lz4str;
+
 		} else {
-			for (size_t i = 0; i < N; i++) {
-				message << it->second.at(i);
-				++n_send;
+			size_t N = it->second.size();
+			message << N;
+
+			if (do_kr_mapping) {
+				std::vector<uint32_t> &v = nodeidmap.at(it->first);
+				for (size_t i = 0; i < N; i++) {
+					message << it->second.at(i) << v.at(i);
+					++n_send;
+				}
+			} else {
+				for (size_t i = 0; i < N; i++) {
+					message << it->second.at(i);
+					++n_send;
+				}
 			}
 		}
-
 		socket->send(message);
 		zmqpp::message message2;
 		socket->receive(message2);
@@ -110,12 +154,13 @@ void KmerCountingClient::send_kmers(const std::vector<string> &kmers,
 void KmerCountingClient::map_line(const string &line, int kmer_length,
 		bool without_canonical_kmer, std::vector<string> &kmers,
 		std::vector<uint32_t> &nodeids) {
-	std::vector<std::string> arr = split(line, "\t");
+	std::vector<std::string> arr;
+	split(arr, line, "\t");
 	if (arr.empty()) {
 		return;
 	}
 	if (arr.size() != 3) {
-		mywarn("Warning, ignore line: %s", line.c_str());
+		mywarn("Warning, ignore line (s=%ld): %s", arr.size(), line.c_str());
 		return;
 	}
 	string seq = arr.at(2);

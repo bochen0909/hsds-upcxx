@@ -13,6 +13,8 @@
 
 namespace sparc {
 
+std::string get_env( const std::string & var );
+
 std::string get_working_dir();
 std::string get_hostname();
 
@@ -50,6 +52,8 @@ inline std::string rtrim_copy(std::string s);
 inline std::string trim_copy(std::string s);
 
 std::vector<std::string> split(std::string str, std::string sep);
+
+void split(std::vector<std::string>& arr, std::string str, std::string sep);
 
 std::string get_ip_adderss();
 

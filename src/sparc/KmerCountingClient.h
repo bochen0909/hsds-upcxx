@@ -38,6 +38,7 @@ protected:
 	zmqpp::context *context;
 	uint64_t n_send;
 	bool do_kr_mapping;
+	bool b_compress_message=false;
 };
 
 #endif /* SOURCE_DIRECTORY__SRC_SPARC_KMERCOUNTINGCLIENT_H_ */

@@ -255,7 +255,7 @@ if(BUILD_SPARC_MIMIR)
 
 	add_executable(test_lz4string src/test_lz4string.cpp src/sparc/LZ4String.cpp)
 	target_include_directories(test_lz4string PUBLIC "${LOCAL_EXT_PREFIX_DIR}/include" )
-	target_link_libraries(test_lz4string PUBLIC lz4)
+	target_link_libraries(test_lz4string PUBLIC lz4 zmqpp zmq Threads::Threads)
 	
 	add_executable(kmer_counting_mpi 
 		src/kmer_counting_mpi.cpp 
@@ -297,7 +297,7 @@ if(BUILD_SPARC_MIMIR)
 		add_dependencies(${EXEC} leveldblib zmqpplib spdloglib gzstreamlib)
 		target_include_directories(${EXEC} PUBLIC "${LOCAL_EXT_PREFIX_DIR}/include" )
 		target_include_directories(${EXEC} PUBLIC "${MPI_CXX_INCLUDE_DIRS}" )
-		target_link_libraries(${EXEC} PUBLIC zmq zmqpp leveldb snappy lz4 spdlog gzstream ZLIB::ZLIB Threads::Threads dl)
+		target_link_libraries(${EXEC} PUBLIC zmqpp zmq leveldb snappy lz4 spdlog gzstream ZLIB::ZLIB Threads::Threads dl)
 	    target_link_libraries(${EXEC} PUBLIC ${MPI_CXX_LIBRARIES})
 	    set_target_properties(${EXEC} PROPERTIES EXCLUDE_FROM_ALL TRUE)
 	    add_dependencies(sparc_mpi ${EXEC})

@@ -75,9 +75,47 @@ void test_LZ4String(void) {
 		TEST_CHECK(s.length() < s.raw_length());
 		TEST_STR_EQUAL(c3, s.toString().c_str());
 	}
+	{
+		bool b = LZ4String() == LZ4String();
+		TEST_CHECK(b);
+		b = (LZ4String("A") == LZ4String("A"));
+		TEST_CHECK(b);
+		b = (LZ4String("") == LZ4String(""));
+		TEST_CHECK(b);
+		b = (LZ4String("") == LZ4String());
+		TEST_CHECK(b);
+		b = (LZ4String("ab") == LZ4String("a"));
+		TEST_CHECK(!b);
+	}
+}
+
+void test_LZ4String_and_zmq_message(void) {
+	char c1[] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+	char c2[] = "ABCD";
+	{
+		LZ4String s(c1);
+		TEST_INT_EQUAL(strlen(c1), s.raw_length());
+		TEST_CHECK(s.length() < s.raw_length());
+		TEST_STR_EQUAL(c1, s.toString().c_str());
+		zmqpp::message message;
+		message << s;
+		LZ4String s2;
+		message >> s2;
+		bool b = s == s2;
+		TEST_CHECK(b);
+	}
+
+	{
+		LZ4String s(c2);
+		TEST_INT_EQUAL(strlen(c2), s.raw_length());
+		//TEST_CHECK(s.length() == s.raw_length());
+		TEST_STR_EQUAL(c2, s.toString().c_str());
+	}
 }
 
 TEST_LIST = { {"test_LZ4String", test_LZ4String},
+
+	{	"test_LZ4String_and_zmq_message", test_LZ4String_and_zmq_message},
 
 	{	NULL, NULL}};
 

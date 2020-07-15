@@ -56,7 +56,7 @@ int KmerCountingClient::start() {
 		zmqpp::socket *socket = new zmqpp::socket(*context, type);
 
 		// bind to the socket
-		myinfo("connecting to %s", endpoint.c_str());
+		mydebug("connecting to %s", endpoint.c_str());
 		socket->connect(endpoint);
 		peers.push_back(socket);
 	}

@@ -23,6 +23,17 @@ void set_spdlog_pattern(const char* hostname, int rank) {
 	spdlog::set_pattern(ss.str().c_str());
 }
 
+int mydebug(const char *fmt, ...) {
+	char buffer[4096];
+	va_list args;
+	va_start(args, fmt);
+	int rc = vsnprintf(buffer, sizeof(buffer), fmt, args);
+	va_end(args);
+	spdlog::debug(buffer);
+	return rc;
+}
+
+
 int myinfo(const char *fmt, ...) {
 	char buffer[4096];
 	va_list args;

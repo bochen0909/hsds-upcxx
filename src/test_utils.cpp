@@ -20,15 +20,58 @@ using namespace sparc;
 		TEST_MSG("Produced: %f", (double)(b));
 
 #define TEST_STR_EQUAL(a,b) \
-		TEST_CHECK( (a) == (b)); \
+		TEST_CHECK( string(a) == string(b)); \
 		TEST_MSG("Expected: %s", (a)); \
-		TEST_MSG("Produced: %s", (b).c_str());
+		TEST_MSG("Produced: %s", (b));
 
-void test_read_cnl(void) {
-
+void test_trim(void) {
+	std::string s = string(" ");
+	trim(s);
+	TEST_STR_EQUAL("", s)
+	s = string("\r");
+	trim(s);
+	TEST_STR_EQUAL("", s)
+	s = string("\n");
+	trim(s);
+	TEST_STR_EQUAL("", s)
+	s = string("\t");
+	trim(s);
+	TEST_STR_EQUAL("", s)
+	s = string("\r\n");
+	trim(s);
+	TEST_STR_EQUAL("", s)
+	s = string(" \t\n");
+	trim(s);
+	TEST_STR_EQUAL("", s)
+	s = string("\t \t      AAA \t  \t \r \n");
+	trim(s);
+	TEST_STR_EQUAL("AAA", s)
 }
 
-TEST_LIST = { {"test_read_cnl", test_read_cnl},
+void test_split(void) {
+	std::vector<std::string> v;
+	string sep = " ";
+	{
+		v = split("", sep);
+		TEST_INT_EQUAL(0, v.size());
+		v = split(" ", sep);
+		TEST_INT_EQUAL(0, v.size());
+		v = split("  a b   c       d  e  ", sep);
+		TEST_INT_EQUAL(5, v.size());
+	}
+	sep = "\t";
+	{
+		v = split("", sep);
+		TEST_INT_EQUAL(0, v.size());
+		v = split("\t", sep);
+		TEST_INT_EQUAL(0, v.size());
+		v = split("   a\t b \t  c  \t     d \t e  ", sep);
+		TEST_INT_EQUAL(5, v.size());
+	}
+}
 
-{	NULL, NULL}};
+TEST_LIST = { {"test_trim", test_trim},
+
+	{	"test_split", test_split},
+	{	NULL, NULL}};
 

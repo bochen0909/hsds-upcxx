@@ -186,7 +186,7 @@ set_target_properties(leveldblib PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 configure_file(src/SparcConfig.h.in src/SparcConfig.h)
 
-add_executable(test_utils src/test_utils.cpp)
+add_executable(test_utils src/test_utils.cpp src/sparc/utils.cpp)
 add_executable(test_kmer src/test_kmer.cpp src/kmer.cpp)
 
 target_include_directories(test_utils PUBLIC

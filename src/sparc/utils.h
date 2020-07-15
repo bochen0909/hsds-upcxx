@@ -51,6 +51,8 @@ inline std::string rtrim_copy(std::string s);
 // trim from both ends (copying)
 inline std::string trim_copy(std::string s);
 
+void shuffle(std::vector<int>& v);
+
 
 std::vector<std::string> split(const std::string &source,
 		const char *delimiter = " ", bool keepEmpty = false);

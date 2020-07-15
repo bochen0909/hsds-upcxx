@@ -19,8 +19,8 @@ using namespace std;
 using namespace sparc;
 
 EdgeCountingClient::EdgeCountingClient(const std::vector<int> &peers_ports,
-		const std::vector<std::string> &peers_hosts) :
-		KmerCountingClient(peers_ports, peers_hosts, false) {
+		const std::vector<std::string> &peers_hosts,const std::vector<int> &hash_rank_mapping) :
+		KmerCountingClient(peers_ports, peers_hosts, hash_rank_mapping, false) {
 
 }
 

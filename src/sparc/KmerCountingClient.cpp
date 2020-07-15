@@ -21,8 +21,8 @@ using namespace std;
 using namespace sparc;
 
 KmerCountingClient::KmerCountingClient(const std::vector<int> &peers_ports,
-		const std::vector<std::string> &peers_hosts, bool do_kr_mapping) :
-		peers_ports(peers_ports), peers_hosts(peers_hosts), context(NULL), n_send(
+		const std::vector<std::string> &peers_hosts,const std::vector<int> &hash_rank_mapping, bool do_kr_mapping) :
+		peers_ports(peers_ports), peers_hosts(peers_hosts), hash_rank_mapping(hash_rank_mapping), context(NULL), n_send(
 				0), do_kr_mapping(do_kr_mapping) {
 	assert(peers_hosts.size() == peers_ports.size());
 
@@ -89,6 +89,7 @@ void KmerCountingClient::send_kmers(const std::vector<string> &kmers,
 	for (size_t i = 0; i < kmers.size(); i++) {
 		const string &s = kmers.at(i);
 		size_t k = hash_string(s) % npeers;
+		k = hash_rank_mapping[k];
 		kmermap[k].push_back(s);
 		if (do_kr_mapping) {
 			nodeidmap[k].push_back(nodeids.at(i));

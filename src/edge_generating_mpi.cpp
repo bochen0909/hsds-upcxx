@@ -43,6 +43,7 @@ struct Config {
 	bool zip_output;
 	std::vector<int> peers_ports;
 	std::vector<std::string> peers_hosts;
+	std::vector<int> hash_rank_mapping;
 
 	void print() {
 		myinfo("config: max_degree=%ld", max_degree);
@@ -288,10 +289,37 @@ void get_peers_information(Config &config) {
 
 }
 
+void reshuffle_rank(Config &config) {
+
+	int nproc = config.nprocs;
+	int buf[nproc];
+	if (config.rank == 0) {
+		std::vector<int> v;
+		for (int i = 0; i < nproc; i++) {
+			v.push_back(i);
+		}
+		shuffle(v);
+		for (int i = 0; i < nproc; i++) {
+			buf[i] = v.at(i);
+		}
+	}
+
+	MPI_Bcast(&buf, nproc, MPI_INT, 0, MPI_COMM_WORLD);
+
+	for (int i = 0; i < nproc; i++) {
+		config.hash_rank_mapping.push_back(buf[i]);
+		if (config.rank == 0) {
+			myinfo("hash %d will be sent to rank %d", i, buf[i]);
+		}
+	}
+}
+
 int run(const std::vector<std::string> &input, Config &config) {
+
 	if (config.rank == 0) {
 		config.print();
 	}
+	reshuffle_rank(config);
 	get_peers_information(config);
 	KmerCountingListener listener(config.mpi_ipaddress, config.get_my_port(),
 			config.get_dbpath(), config.dbtype, false);
@@ -305,7 +333,8 @@ int run(const std::vector<std::string> &input, Config &config) {
 	//wait for all server is ready
 	MPI_Barrier(MPI_COMM_WORLD);
 	myinfo("Starting client");
-	EdgeCountingClient client(config.peers_ports, config.peers_hosts);
+	EdgeCountingClient client(config.peers_ports, config.peers_hosts,
+			config.hash_rank_mapping);
 	if (client.start() != 0) {
 		myerror("Start client failed");
 		MPI_Abort( MPI_COMM_WORLD, -1);

@@ -15,7 +15,7 @@
 class KmerCountingClient {
 public:
 	KmerCountingClient(const std::vector<int> &peers_ports,
-			const std::vector<std::string> &peers_hosts, bool do_kr_mapping =
+			const std::vector<std::string> &peers_hosts,const std::vector<int> &hash_rank_mapping, bool do_kr_mapping =
 					false);
 	virtual ~KmerCountingClient();
 
@@ -33,6 +33,7 @@ protected:
 			const std::vector<uint32_t> &nodeids);
 protected:
 	std::vector<int> peers_ports;
+	std::vector<int> hash_rank_mapping;
 	std::vector<std::string> peers_hosts;
 	std::vector<zmqpp::socket*> peers;
 	zmqpp::context *context;

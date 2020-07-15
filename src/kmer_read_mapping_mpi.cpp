@@ -42,6 +42,7 @@ struct Config {
 	DBHelper::DBTYPE dbtype;
 	bool zip_output;
 	std::vector<int> peers_ports;
+	std::vector<int> hash_rank_mapping;
 	std::vector<std::string> peers_hosts;
 
 	void print() {
@@ -246,7 +247,7 @@ int main(int argc, char **argv) {
 	}
 	std::vector<std::string> myinput;
 	for (size_t i = 0; i < input.size(); i++) {
-		if ( (int) (i % size) == rank) {
+		if ((int) (i % size) == rank) {
 			myinput.push_back(input.at(i));
 		}
 	}
@@ -285,11 +286,36 @@ void get_peers_information(Config &config) {
 	}
 
 }
+void reshuffle_rank(Config &config) {
+
+	int nproc = config.nprocs;
+	int buf[nproc];
+	if (config.rank == 0) {
+		std::vector<int> v;
+		for (int i = 0; i < nproc; i++) {
+			v.push_back(i);
+		}
+		shuffle(v);
+		for (int i = 0; i < nproc; i++) {
+			buf[i] = v.at(i);
+		}
+	}
+
+	MPI_Bcast(&buf, nproc, MPI_INT, 0, MPI_COMM_WORLD);
+	for (int i = 0; i < nproc; i++) {
+		config.hash_rank_mapping.push_back(buf[i]);
+		if (config.rank == 0) {
+			myinfo("hash %d will be sent to rank %d", i, buf[i]);
+		}
+	}
+
+}
 
 int run(const std::vector<std::string> &input, Config &config) {
 	if (config.rank == 0) {
 		config.print();
 	}
+	reshuffle_rank(config);
 	get_peers_information(config);
 	KmerCountingListener listener(config.mpi_ipaddress, config.get_my_port(),
 			config.get_dbpath(), config.dbtype, true);
@@ -303,7 +329,8 @@ int run(const std::vector<std::string> &input, Config &config) {
 	//wait for all server is ready
 	MPI_Barrier(MPI_COMM_WORLD);
 	myinfo("Starting client");
-	KmerCountingClient client(config.peers_ports, config.peers_hosts, true);
+	KmerCountingClient client(config.peers_ports, config.peers_hosts,
+			config.hash_rank_mapping, true);
 	if (client.start() != 0) {
 		myerror("Start client failed");
 		MPI_Abort( MPI_COMM_WORLD, -1);

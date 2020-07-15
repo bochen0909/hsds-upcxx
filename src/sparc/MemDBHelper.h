@@ -16,7 +16,7 @@
 #include "robin_hood.h"
 #include "utils.h"
 #include "log.h"
-
+#include "LZ4String.h"
 #include "DBHelper.h"
 template<typename K, typename V>
 using MapIterator = typename robin_hood::unordered_map<K,V>::const_iterator;
@@ -25,7 +25,7 @@ template<typename K, typename V> class MemDBHelper: public DBHelper {
 public:
 	MemDBHelper() :
 			DBHelper(false) {
-		store.reserve(2*1024*1024);
+		store.reserve(2 * 1024 * 1024);
 	}
 	int create() {
 		return 0;
@@ -46,6 +46,11 @@ public:
 	void put(const std::string &key, const std::string &val) {
 		throw -1;
 	}
+
+	void put(const std::string &key, const LZ4String &val) {
+		throw -1;
+	}
+
 	void incr(const std::string &key, uint32_t n = 1) {
 		throw -1;
 	}
@@ -97,4 +102,25 @@ template<> void MemDBHelper<std::string, uint32_t>::incr(const std::string &key,
 		uint32_t n) {
 	store[key] += n;
 }
+
+template<> void MemDBHelper<std::string, std::string>::put(
+		const std::string &key, const std::string &val) {
+	store[key] = val;
+}
+
+template<> void MemDBHelper<std::string, std::string>::append(
+		const std::string &key, const std::string &val) {
+	store[key] += (std::string(" ") + val);
+}
+
+template<> void MemDBHelper<std::string, LZ4String>::put(const std::string &key,
+		const std::string &val) {
+	store[key] = val;
+}
+
+template<> void MemDBHelper<std::string, LZ4String>::append(
+		const std::string &key, const std::string &val) {
+	store[key] += (std::string(" ") + val);
+}
+
 #endif /* SUBPROJECTS__SPARC_MPI_SRC_SPARC_MEMDBHELPER_H_ */

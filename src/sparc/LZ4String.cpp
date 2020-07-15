@@ -105,3 +105,8 @@ LZ4String operator+(LZ4String lhs, const LZ4String &rhs) {
 	lhs += rhs.toString();
 	return lhs;
 }
+
+std::ostream& operator<<(std::ostream &stream, const LZ4String &other) {
+	stream << other.toString();
+	return stream;
+}

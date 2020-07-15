@@ -17,10 +17,11 @@
 using namespace std;
 
 KmerCountingListener::KmerCountingListener(const std::string &hostname,
-		int port, const std::string &dbpath, DBHelper::DBTYPE dbtype) :
+		int port, const std::string &dbpath, DBHelper::DBTYPE dbtype,
+		bool do_kr_mapping) :
 		hostname(hostname), port(port), going_stop(false), thread_id(0), thread_stopped(
 				true), dbpath(dbpath), dbhelper(NULL), dbtype(dbtype), n_recv(
-				0) {
+				0), do_kr_mapping(do_kr_mapping) {
 
 }
 
@@ -53,16 +54,23 @@ void* KmerCountingListener::thread_run(void *vargp) {
 		// receive the message
 		zmqpp::message message;
 		// decompose the message
-		if(!socket.receive(message)){
+		if (!socket.receive(message)) {
 			continue;
 		}
 		size_t N;
 		message >> N;
 		//cout << "inc " << N << endl;
 		for (size_t i = 0; i < N; i++) {
-			string text;
-			message >> text;
-			dbhelper.incr(text);
+			if (self.do_kr_mapping) {
+				string kmer;
+				uint32_t nodeid;
+				message >> kmer >> nodeid;
+				dbhelper.append(kmer, std::to_string(nodeid));
+			} else {
+				string kmer;
+				message >> kmer;
+				dbhelper.incr(kmer);
+			}
 			++self.n_recv;
 		}
 		zmqpp::message message2;
@@ -90,13 +98,18 @@ int KmerCountingListener::removedb() {
 	return 0;
 }
 int KmerCountingListener::start() {
-	if (dbtype==DBHelper::LEVEL_DB) {
+	if (dbtype == DBHelper::LEVEL_DB) {
 		dbhelper = new LevelDBHelper(dbpath);
-	} else if (dbtype==DBHelper::ROCKS_DB) {
+	} else if (dbtype == DBHelper::ROCKS_DB) {
 		//dbhelper = new RocksDBHelper(dbpath);
-		throw  std::runtime_error("rocksdb was removed due to always coredump");
-	} else{
-		dbhelper = new MemDBHelper<std::string, uint32_t>();
+		throw std::runtime_error("rocksdb was removed due to always coredump");
+	} else {
+		if (do_kr_mapping) {
+			//dbhelper = new MemDBHelper<std::string, std::string>();
+			dbhelper = new MemDBHelper<std::string, LZ4String>();
+		} else {
+			dbhelper = new MemDBHelper<std::string, uint32_t>();
+		}
 	}
 	dbhelper->create();
 	pthread_create(&thread_id, NULL, thread_run, this);
@@ -125,7 +138,7 @@ int KmerCountingListener::stop() {
 	return 0;
 }
 
-uint64_t KmerCountingListener::get_n_recv(){
+uint64_t KmerCountingListener::get_n_recv() {
 	return n_recv;
 }
 

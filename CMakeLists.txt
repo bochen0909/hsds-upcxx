@@ -267,10 +267,32 @@ if(BUILD_SPARC_MIMIR)
 		#src/sparc/RocksDBHelper.cpp
 		src/sparc/LZ4String.cpp
 		src/sparc/utils.cpp
+		)
+	add_executable(kmer_read_mapping_mpi 
+		src/kmer_read_mapping_mpi.cpp 
+		src/kmer.cpp src/sparc/log.cpp 
+		src/sparc/KmerCountingListener.cpp
+		src/sparc/KmerCountingClient.cpp
+		src/sparc/DBHelper.cpp
+		src/sparc/LevelDBHelper.cpp
+		#src/sparc/RocksDBHelper.cpp
+		src/sparc/LZ4String.cpp
+		src/sparc/utils.cpp
 		)	
-	add_executable(edge_generating_mpi src/edge_generating_mpi.cpp src/kmer.cpp src/sparc/utils.cpp )
-
-	foreach(EXEC kmer_counting_mpi edge_generating_mpi)
+		
+	add_executable(edge_generating_mpi 
+		src/kmer_read_mapping_mpi.cpp 
+		src/kmer.cpp src/sparc/log.cpp 
+		src/sparc/KmerCountingListener.cpp
+		src/sparc/KmerCountingClient.cpp
+		src/sparc/DBHelper.cpp
+		src/sparc/LevelDBHelper.cpp
+		#src/sparc/RocksDBHelper.cpp
+		src/sparc/LZ4String.cpp
+		src/sparc/utils.cpp
+		)	
+			
+	foreach(EXEC kmer_counting_mpi kmer_read_mapping_mpi edge_generating_mpi)
 		add_dependencies(${EXEC} leveldblib zmqpplib spdloglib gzstreamlib)
 		target_include_directories(${EXEC} PUBLIC "${LOCAL_EXT_PREFIX_DIR}/include" )
 		target_include_directories(${EXEC} PUBLIC "${MPI_CXX_INCLUDE_DIRS}" )

@@ -18,8 +18,9 @@ using namespace std;
 using namespace sparc;
 
 KmerCountingClient::KmerCountingClient(const std::vector<int> &peers_ports,
-		const std::vector<std::string> &peers_hosts) :
-		peers_ports(peers_ports), peers_hosts(peers_hosts), context(NULL), n_send(0) {
+		const std::vector<std::string> &peers_hosts, bool do_kr_mapping) :
+		peers_ports(peers_ports), peers_hosts(peers_hosts), context(NULL), n_send(
+				0), do_kr_mapping(do_kr_mapping) {
 	assert(peers_hosts.size() == peers_ports.size());
 }
 
@@ -38,12 +39,12 @@ int KmerCountingClient::stop() {
 	return 0;
 }
 
-uint64_t KmerCountingClient::get_n_sent(){
+uint64_t KmerCountingClient::get_n_sent() {
 	return n_send;
 }
 
 int KmerCountingClient::start() {
-	n_send=0;
+	n_send = 0;
 	context = new zmqpp::context();
 	for (size_t i = 0; i < peers_ports.size(); i++) {
 
@@ -61,38 +62,54 @@ int KmerCountingClient::start() {
 	}
 	return 0;
 }
-void KmerCountingClient::send_kmers(const std::vector<string> &kmers) {
-	std::map<int, std::vector<string>> kmermap;
+void KmerCountingClient::send_kmers(const std::vector<string> &kmers,
+		const std::vector<uint32_t> &nodeids) {
+	std::map<size_t, std::vector<string>> kmermap;
+	std::map<size_t, std::vector<uint32_t>> nodeidmap;
 	size_t npeers = peers.size();
 	for (size_t i = 0; i < kmers.size(); i++) {
 		const string &s = kmers.at(i);
-		kmermap[hash_string(s) % npeers].push_back(s);
+		size_t k = hash_string(s) % npeers;
+		kmermap[k].push_back(s);
+		if (do_kr_mapping) {
+			nodeidmap[k].push_back(nodeids.at(i));
+		}
 	}
 
-	for (std::map<int, std::vector<string>>::iterator it = kmermap.begin();
+	for (std::map<size_t, std::vector<string>>::iterator it = kmermap.begin();
 			it != kmermap.end(); it++) {
 		zmqpp::socket *socket = peers[it->first];
 		zmqpp::message message;
-		size_t N =it->second.size();
-		//cout << "send " << N << endl;
+		size_t N = it->second.size();
 		message << N;
-		for (size_t i = 0; i < N; i++) {
-			message << it->second.at(i);
-			++n_send;
+
+		if (do_kr_mapping) {
+			std::vector<uint32_t> &v = nodeidmap.at(it->first);
+			for (size_t i = 0; i < N; i++) {
+				message << it->second.at(i) << v.at(i);
+				++n_send;
+			}
+		} else {
+			for (size_t i = 0; i < N; i++) {
+				message << it->second.at(i);
+				++n_send;
+			}
 		}
+
 		socket->send(message);
 		zmqpp::message message2;
 		socket->receive(message2);
 		std::string reply;
 		message2 >> reply;
-		if(reply!="OK"){
+		if (reply != "OK") {
 			myerror("get reply failed");
 		}
 	}
 }
 
 void KmerCountingClient::map_line(const string &line, int kmer_length,
-		bool without_canonical_kmer, std::vector<string> &kmers) {
+		bool without_canonical_kmer, std::vector<string> &kmers,
+		std::vector<uint32_t> &nodeids) {
 	std::vector<std::string> arr = split(line, "\t");
 	if (arr.empty()) {
 		return;
@@ -103,42 +120,50 @@ void KmerCountingClient::map_line(const string &line, int kmer_length,
 	}
 	string seq = arr.at(2);
 	trim(seq);
+	uint32_t nodeid = std::stoul(arr.at(0));
 
 	std::vector<std::string> v = generate_kmer(seq, kmer_length, 'N',
 			!without_canonical_kmer);
 	for (size_t i = 0; i < v.size(); i++) {
 		kmers.push_back(kmer_to_base64(v[i]));
+		if (do_kr_mapping) {
+			nodeids.push_back(nodeid);
+		}
 	}
 }
 
 int KmerCountingClient::process_seq_file(const std::string &filepath,
 		int kmer_length, bool without_canonical_kmer) {
 	std::vector<string> kmers;
+	std::vector<uint32_t> nodeids;
 	if (endswith(filepath, ".gz")) {
 		igzstream file(filepath.c_str());
 		std::string line;
 		while (std::getline(file, line)) {
-			map_line(line, kmer_length, without_canonical_kmer, kmers);
+			map_line(line, kmer_length, without_canonical_kmer, kmers, nodeids);
 			if (kmers.size() >= KMER_SEND_BATCH_SIZE) {
-				send_kmers(kmers);
+				send_kmers(kmers, nodeids);
 				kmers.clear();
+				nodeids.clear();
 			}
 		}
 	} else {
 		std::ifstream file(filepath);
 		std::string line;
 		while (std::getline(file, line)) {
-			map_line(line, kmer_length, without_canonical_kmer, kmers);
+			map_line(line, kmer_length, without_canonical_kmer, kmers, nodeids);
 			if (kmers.size() >= KMER_SEND_BATCH_SIZE) {
-				send_kmers(kmers);
+				send_kmers(kmers, nodeids);
 				kmers.clear();
+				nodeids.clear();
 			}
 		}
 	}
 
 	if (!kmers.empty()) {
-		send_kmers(kmers);
+		send_kmers(kmers, nodeids);
 		kmers.clear();
+		nodeids.clear();
 	}
 
 	return 0;

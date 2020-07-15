@@ -15,7 +15,7 @@
 class KmerCountingClient {
 public:
 	KmerCountingClient(const std::vector<int> &peers_ports,
-			const std::vector<std::string> &peers_hosts);
+			const std::vector<std::string> &peers_hosts,bool do_kr_mapping = false);
 	virtual ~KmerCountingClient();
 
 	int start();
@@ -26,14 +26,15 @@ public:
 			bool without_canonical_kmer);
 protected:
 	inline void map_line(const std::string &line, int kmer_length,
-			bool without_canonical_kmer, std::vector<std::string> &kmers);
-	void send_kmers(const std::vector<string> &kmers);
+			bool without_canonical_kmer, std::vector<std::string> &kmers, std::vector<uint32_t>& nodeids);
+	void send_kmers(const std::vector<string> &kmers, const std::vector<uint32_t> &nodeids);
 private:
 	std::vector<int> peers_ports;
 	std::vector<std::string> peers_hosts;
 	std::vector<zmqpp::socket*> peers;
 	zmqpp::context *context;
 	uint64_t n_send;
+	bool do_kr_mapping;
 };
 
 #endif /* SOURCE_DIRECTORY__SRC_SPARC_KMERCOUNTINGCLIENT_H_ */

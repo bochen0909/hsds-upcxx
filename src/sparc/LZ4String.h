@@ -9,6 +9,7 @@
 #define SUBPROJECTS__SPARC_MPI_SRC_SPARC_LZ4STRING_H_
 
 #include <string>
+#include <ostream>
 class LZ4String {
 public:
 	LZ4String();
@@ -17,11 +18,13 @@ public:
 	LZ4String(const LZ4String &other);
 	LZ4String& operator=(const LZ4String &rhs);
 	LZ4String& operator+=(const std::string &rhs);
-	friend LZ4String operator+(LZ4String lhs, const LZ4String &rhs);
 	size_t length();
 	size_t raw_length();
 	std::string toString()  const;
 	virtual ~LZ4String();
+
+	friend LZ4String operator+(LZ4String lhs, const LZ4String &rhs);
+    friend std::ostream& operator<< (std::ostream& stream, const LZ4String& other);
 
 protected:
 	inline void assign_compressed_string(const char *s, size_t len,

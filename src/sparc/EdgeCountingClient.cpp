@@ -54,10 +54,7 @@ void EdgeCountingClient::map_line(const std::string &line,
 	}
 	std::vector<std::pair<uint32_t, uint32_t> > edges = generate_edges(reads,
 			max_degree);
-	if((reads.size()*(reads.size()-1)/2!=edges.size())){
-	cout << "AAA " << arr.at(0) << " " << edges.size() << " " << reads.size() << " " << (reads.size()*(reads.size()-1)/2==edges.size()) << endl;
-	cout << line << endl;
-	}
+
 	for (int i = 0; i < edges.size(); i++) {
 		uint32_t a = edges.at(i).first;
 		uint32_t b = edges.at(i).second;

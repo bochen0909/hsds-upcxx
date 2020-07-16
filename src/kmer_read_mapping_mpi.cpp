@@ -62,7 +62,7 @@ struct Config {
 
 	std::string get_dbpath() {
 		char tmp[2048];
-		sprintf(tmp, "%s/kc_%d.db", scratch_dir.c_str(), rank);
+		sprintf(tmp, "%s/krm_%d.db", scratch_dir.c_str(), rank);
 		return tmp;
 	}
 

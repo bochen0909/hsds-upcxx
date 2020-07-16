@@ -61,14 +61,8 @@ struct Config {
 	}
 
 	std::string get_dbpath() {
-
 		char tmp[2048];
-		if (zip_output) {
-			sprintf(tmp, "%s/part_%d.txt.gz", outputpath.c_str(), rank);
-		} else {
-			sprintf(tmp, "%s/part_%d.txt", outputpath.c_str(), rank);
-		}
-
+		sprintf(tmp, "%s/edge_%d.db", scratch_dir.c_str(), rank);
 		return tmp;
 	}
 

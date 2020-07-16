@@ -116,8 +116,9 @@ int main(int argc, char **argv) {
 	config.mpi_hostname = MPI_get_hostname();
 	config.mpi_ipaddress = get_ip_adderss(config.mpi_hostname);
 	set_spdlog_pattern(config.mpi_hostname.c_str(), rank);
-
-	myinfo("Welcome to Sparc!");
+	if (rank == 0) {
+		myinfo("Welcome to Sparc!");
+	}
 
 	argagg::parser argparser { {
 
@@ -178,7 +179,14 @@ int main(int argc, char **argv) {
 		if (dbtype == "memdb") {
 			config.dbtype = DBHelper::MEMORY_DB;
 		} else if (dbtype == "leveldb") {
+#ifdef BUILD_WITH_LEVELDB
 			config.dbtype = DBHelper::LEVEL_DB;
+#else
+			cerr
+					<< "was not compiled with leveldb suppot. Please cmake with BUILD_WITH_LEVELDB=ON"
+					<< dbtype << endl;
+			return EXIT_FAILURE;
+#endif
 		} else if (dbtype == "rocksdb") {
 			config.dbtype = DBHelper::ROCKS_DB;
 			cerr << "rocksdb was removed due to always coredump" << endl;

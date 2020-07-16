@@ -21,6 +21,8 @@ option(BUILD_SPARC_MIMIR "build Mimir version of Sparc" ON)
 option(BUILD_SPARC_MRMPI "build MR-MPI version of Sparc" ON)
 option(BUILD_SPARC_MPI "build pure MPI version of Sparc" ON)
 
+option(BUILD_WITH_LEVELDB "build MPI version of Sparc with leveldb support" OFF)
+
 set(LOCAL_EXT_PREFIX_DIR ${PROJECT_SOURCE_DIR}/extlib/local)       
 
 add_custom_target(sparc_mimir ALL)
@@ -263,7 +265,6 @@ if(BUILD_SPARC_MIMIR)
 		src/sparc/KmerCountingListener.cpp
 		src/sparc/KmerCountingClient.cpp
 		src/sparc/DBHelper.cpp
-		src/sparc/LevelDBHelper.cpp
 		#src/sparc/RocksDBHelper.cpp
 		src/sparc/LZ4String.cpp
 		src/sparc/utils.cpp
@@ -274,7 +275,6 @@ if(BUILD_SPARC_MIMIR)
 		src/sparc/KmerCountingListener.cpp
 		src/sparc/KmerCountingClient.cpp
 		src/sparc/DBHelper.cpp
-		src/sparc/LevelDBHelper.cpp
 		#src/sparc/RocksDBHelper.cpp
 		src/sparc/LZ4String.cpp
 		src/sparc/utils.cpp
@@ -287,17 +287,22 @@ if(BUILD_SPARC_MIMIR)
 		src/sparc/KmerCountingClient.cpp
 		src/sparc/EdgeCountingClient.cpp
 		src/sparc/DBHelper.cpp
-		src/sparc/LevelDBHelper.cpp
 		#src/sparc/RocksDBHelper.cpp
 		src/sparc/LZ4String.cpp
 		src/sparc/utils.cpp
 		)	
 			
 	foreach(EXEC kmer_counting_mpi kmer_read_mapping_mpi edge_generating_mpi)
-		add_dependencies(${EXEC} leveldblib zmqpplib spdloglib gzstreamlib)
+		if(BUILD_WITH_LEVELDB)
+			target_sources( ${EXEC} src/sparc/LevelDBHelper.cpp)
+			add_dependencies(${EXEC} leveldblib)
+			target_link_libraries(${EXEC} PUBLIC leveldb snappy)
+			set_target_properties(${EXEC} PROPERTIES COMPILE_FLAGS "-DBUILD_WITH_LEVELDB")
+		endif()
+		add_dependencies(${EXEC} zmqpplib spdloglib gzstreamlib)
 		target_include_directories(${EXEC} PUBLIC "${LOCAL_EXT_PREFIX_DIR}/include" )
 		target_include_directories(${EXEC} PUBLIC "${MPI_CXX_INCLUDE_DIRS}" )
-		target_link_libraries(${EXEC} PUBLIC zmqpp zmq leveldb snappy lz4 spdlog gzstream ZLIB::ZLIB Threads::Threads dl)
+		target_link_libraries(${EXEC} PUBLIC zmqpp zmq lz4 spdlog gzstream ZLIB::ZLIB Threads::Threads dl)
 	    target_link_libraries(${EXEC} PUBLIC ${MPI_CXX_LIBRARIES})
 	    set_target_properties(${EXEC} PROPERTIES EXCLUDE_FROM_ALL TRUE)
 	    add_dependencies(sparc_mpi ${EXEC})

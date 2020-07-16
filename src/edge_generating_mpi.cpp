@@ -116,33 +116,39 @@ int main(int argc, char **argv) {
 	config.mpi_ipaddress = get_ip_adderss(config.mpi_hostname);
 	set_spdlog_pattern(config.mpi_hostname.c_str(), rank);
 
-	myinfo("Welcome to Sparc!");
+	if (rank == 0) {
+			myinfo("Welcome to Sparc!");
+		}
 
-	argagg::parser argparser { {
+	argagg::parser argparser {
+			{
 
-	{ "help", { "-h", "--help" }, "shows this help message", 0 },
+			{ "help", { "-h", "--help" }, "shows this help message", 0 },
 
-	{ "input", { "-i", "--input" },
-			"input folder which contains read sequences", 1 },
+			{ "input", { "-i", "--input" },
+					"input folder which contains read sequences", 1 },
 
-	{ "port", { "-p", "--port" }, "port number", 1 },
+			{ "port", { "-p", "--port" }, "port number", 1 },
 
-	{ "scratch_dir", { "-s", "--scratch" },
-			"scratch dir where to put temp data", 1 },
+			{ "scratch_dir", { "-s", "--scratch" },
+					"scratch dir where to put temp data", 1 },
 
-	{ "dbtype", { "--db" }, "dbtype (leveldb,rocksdb or default memdb)", 1 },
+			{ "dbtype", { "--db" }, "dbtype (leveldb,rocksdb or default memdb)",
+					1 },
 
-	{ "zip_output", { "-z", "--zip" }, "zip output files", 0 },
+			{ "zip_output", { "-z", "--zip" }, "zip output files", 0 },
 
-	{ "output", { "-o", "--output" }, "output folder", 1 },
+			{ "output", { "-o", "--output" }, "output folder", 1 },
 
-	{ "max_degree", { "--max-degree" },
-			"max_degree of a node; max_degree should be greater than 1", 1 },
+			{ "max_degree", { "--max-degree" },
+					"max_degree of a node; max_degree should be greater than 1",
+					1 },
 
-	{ "min_shared_kmers", { "--min-shared-kmers" },
-			"minimum number of kmers that two reads share", 1 },
+					{ "min_shared_kmers", { "--min-shared-kmers" },
+							"minimum number of kmers that two reads share. (note: this option does notework)",
+							1 },
 
-	} };
+			} };
 
 	argagg::parser_results args;
 	try {
@@ -181,7 +187,14 @@ int main(int argc, char **argv) {
 		if (dbtype == "memdb") {
 			config.dbtype = DBHelper::MEMORY_DB;
 		} else if (dbtype == "leveldb") {
+#ifdef BUILD_WITH_LEVELDB
 			config.dbtype = DBHelper::LEVEL_DB;
+#else
+			cerr
+			<< "was not compiled with leveldb suppot. Please cmake with BUILD_WITH_LEVELDB=ON"
+					<< dbtype << endl;
+			return EXIT_FAILURE;
+#endif
 		} else if (dbtype == "rocksdb") {
 			config.dbtype = DBHelper::ROCKS_DB;
 			cerr << "rocksdb was removed due to always coredump" << endl;

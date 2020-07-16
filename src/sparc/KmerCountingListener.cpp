@@ -12,7 +12,9 @@
 #include "log.h"
 #include "LZ4String.h"
 #include "DBHelper.h"
+#ifdef BUILD_WITH_LEVELDB
 #include "LevelDBHelper.h"
+#endif
 #include "MemDBHelper.h"
 //#include "RocksDBHelper.h"
 #include "KmerCountingListener.h"
@@ -134,7 +136,12 @@ int KmerCountingListener::removedb() {
 }
 int KmerCountingListener::start() {
 	if (dbtype == DBHelper::LEVEL_DB) {
+#ifdef BUILD_WITH_LEVELDB
 		dbhelper = new LevelDBHelper(dbpath);
+#else
+		throw std::runtime_error("leveldb support was not compiled");
+#endif
+
 	} else if (dbtype == DBHelper::ROCKS_DB) {
 		//dbhelper = new RocksDBHelper(dbpath);
 		throw std::runtime_error("rocksdb was removed due to always coredump");

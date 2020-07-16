@@ -88,7 +88,8 @@ void KmerCountingClient::send_kmers(const std::vector<string> &kmers,
 	size_t npeers = peers.size();
 	for (size_t i = 0; i < kmers.size(); i++) {
 		const string &s = kmers.at(i);
-		size_t k = hash_string(s) % npeers;
+		//size_t k = hash_string(s) % npeers;
+		size_t k = fnv_hash(s) % npeers;
 		k = hash_rank_mapping[k];
 		kmermap[k].push_back(s);
 		if (do_kr_mapping) {

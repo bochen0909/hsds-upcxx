@@ -300,8 +300,23 @@ if(BUILD_SPARC_MIMIR)
 		src/sparc/utils.cpp
 		src/kmer.cpp src/sparc/log.cpp		
 		)	
-			
-	foreach(EXEC kmer_counting_mpi kmer_read_mapping_mpi edge_generating_mpi merge_intrmed_mpi)
+
+	add_executable(lpav1_mpi 
+		#src/merge_intrmed_mpi.cpp
+		src/sparc/LPAState.cpp
+		src/sparc/LPAClient.cpp
+		src/sparc/ZMQClient.cpp
+		src/sparc/KmerCountingClient.cpp
+		src/sparc/KmerCountingListener.cpp		 
+		src/sparc/EdgeReadClient.cpp
+		src/sparc/EdgeReadListener.cpp
+		src/sparc/DBHelper.cpp
+		src/sparc/LZ4String.cpp
+		src/sparc/utils.cpp
+		src/kmer.cpp src/sparc/log.cpp		
+		)	
+					
+	foreach(EXEC kmer_counting_mpi kmer_read_mapping_mpi edge_generating_mpi merge_intrmed_mpi lpav1_mpi)
 		if(BUILD_WITH_LEVELDB)
 			target_sources( ${EXEC} src/sparc/LevelDBHelper.cpp)
 			add_dependencies(${EXEC} leveldblib)
@@ -317,6 +332,7 @@ if(BUILD_SPARC_MIMIR)
 	    add_dependencies(sparc_mpi ${EXEC})
 	endforeach(EXEC)
 endif()
+
 
 
 

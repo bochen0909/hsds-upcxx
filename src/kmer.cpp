@@ -291,6 +291,10 @@ uint32_t fnv_hash(const std::string &str) {
 	return h;
 }
 
+uint32_t fnv_hash(uint32_t n) {
+	return fnv_hash(std::to_string(n));
+}
+
 static const char BASE64_CHARS[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		"abcdefghijklmnopqrstuvwxyz"
 		"0123456789+/";

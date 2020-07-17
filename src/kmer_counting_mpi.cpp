@@ -49,7 +49,7 @@ struct Config {
 		myinfo("config: kmer_length=%d", kmer_length);
 		myinfo("config: canonical_kmer=%d", !without_canonical_kmer ? 1 : 0);
 		myinfo("config: zip_output=%d", zip_output ? 1 : 0);
-		myinfo("config: inputpath=%s", outputpath.c_str());
+		myinfo("config: inputpath=%s", inputpath.c_str());
 		myinfo("config: outputpath=%s", outputpath.c_str());
 		myinfo("config: scratch_dir=%s", scratch_dir.c_str());
 		myinfo("config: dbpath=%s", get_dbpath().c_str());
@@ -256,7 +256,8 @@ int main(int argc, char **argv) {
 	}
 	std::vector<std::string> myinput;
 	for (size_t i = 0; i < input.size(); i++) {
-		if ((int) (i % size) == rank) {
+		std::string filename = input.at(i);
+		if ((int) ( fnv_hash(filename) % size) == rank) {
 			myinput.push_back(input.at(i));
 		}
 	}

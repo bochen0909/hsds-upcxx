@@ -1,7 +1,7 @@
 /*
- * edge_generating_mpi.cpp
  *
- *  Created on: Jul 15, 2020
+ *
+ *  Created on: Jul 13, 2020
  *      Author:
  */
 
@@ -22,23 +22,25 @@
 #include "sparc/utils.h"
 #include "kmer.h"
 #include "sparc/log.h"
-#include "sparc/KmerCountingListener.h"
-#include "sparc/KmerCountingClient.h"
+#include "sparc/MergeListener.h"
+#include "sparc/MergeClient.h"
 #include "sparc/DBHelper.h"
 using namespace std;
 using namespace sparc;
 
 struct Config {
-	bool without_canonical_kmer;
-	int kmer_length;
-	string inputpath;
+	bool append_merge;
+	std::vector<string> inputpath;
 	string outputpath;
 	string scratch_dir;
 	string mpi_hostname;
 	string mpi_ipaddress;
+	int num_bucket;
+	int sep_pos;
 	int port;
 	int rank;
 	int nprocs;
+	char sep;
 	DBHelper::DBTYPE dbtype;
 	bool zip_output;
 	std::vector<int> peers_ports;
@@ -46,13 +48,22 @@ struct Config {
 	std::vector<std::string> peers_hosts;
 
 	void print() {
-		myinfo("config: kmer_length=%d", kmer_length);
-		myinfo("config: canonical_kmer=%d", !without_canonical_kmer ? 1 : 0);
+		myinfo("config: aggregate=%s", append_merge ? "append" : "sum");
+		myinfo("config: num_bucket=%d", num_bucket ? 1 : 0);
+		myinfo("config: sep_pos=%d", sep_pos);
+		if (sep == '\t') {
+			myinfo("config: sep=TAB");
+		} else if (sep == ' ') {
+			myinfo("config: sep=SPACE");
+		} else {
+			myinfo("config: sep=%c", sep);
+		}
 		myinfo("config: zip_output=%d", zip_output ? 1 : 0);
-		myinfo("config: inputpath=%s", inputpath.c_str());
+		for (size_t i = 0; i < inputpath.size(); i++) {
+			myinfo("config: inputpath[%d]=%s", i, inputpath.at(i).c_str());
+		}
 		myinfo("config: outputpath=%s", outputpath.c_str());
 		myinfo("config: scratch_dir=%s", scratch_dir.c_str());
-		myinfo("config: dbpath=%s", get_dbpath().c_str());
 		myinfo("config: dbtype=%s",
 				dbtype == DBHelper::MEMORY_DB ?
 						"memory" :
@@ -60,25 +71,24 @@ struct Config {
 		myinfo("config: #procs=%d", nprocs);
 	}
 
-	std::string get_dbpath() {
+	std::string get_dbpath(int h) {
 		char tmp[2048];
-		sprintf(tmp, "%s/krm_%d.db", scratch_dir.c_str(), rank);
+		sprintf(tmp, "%s/part_h%d_r%d.db", scratch_dir.c_str(), h, rank);
 		return tmp;
 	}
 
-	std::string get_my_output() {
+	std::string get_my_output(int h) {
 		char tmp[2048];
 		if (zip_output) {
-			sprintf(tmp, "%s/part_%d.txt.gz", outputpath.c_str(), rank);
+			sprintf(tmp, "%s/part_h%d_r%d.txt.gz", outputpath.c_str(), h, rank);
 		} else {
-			sprintf(tmp, "%s/part_%d.txt", outputpath.c_str(), rank);
+			sprintf(tmp, "%s/part_h%d_r%d.txt", outputpath.c_str(), h, rank);
 		}
-
 		return tmp;
 	}
 
-	int get_my_port() {
-		return port + rank;
+	int get_my_port(int h) {
+		return port + h * nprocs + rank;
 	}
 
 };
@@ -100,7 +110,9 @@ void check_arg(argagg::parser_results &args, char *name) {
 
 }
 
-int run(const std::vector<std::string> &input, Config &config);
+int run(int bucket, const std::vector<std::string> &input, Config &config);
+int run_bucket(int bucket, const std::vector<std::string> &input,
+		Config &config);
 
 int main(int argc, char **argv) {
 	int rank, size;
@@ -116,34 +128,40 @@ int main(int argc, char **argv) {
 	config.mpi_hostname = MPI_get_hostname();
 	config.mpi_ipaddress = get_ip_adderss(config.mpi_hostname);
 	set_spdlog_pattern(config.mpi_hostname.c_str(), rank);
+
 	if (rank == 0) {
 		myinfo("Welcome to Sparc!");
 	}
 
-	argagg::parser argparser { {
+	argagg::parser argparser {
+			{
 
-	{ "help", { "-h", "--help" }, "shows this help message", 0 },
+			{ "help", { "-h", "--help" }, "shows this help message", 0 },
 
-	{ "input", { "-i", "--input" },
-			"input folder which contains read sequences", 1 },
+			{ "port", { "-p", "--port" }, "port number", 1 },
 
-	{ "port", { "-p", "--port" }, "port number", 1 },
+			{ "scratch_dir", {  "--scratch" },
+					"scratch dir where to put temp data", 1 },
 
-	{ "scratch_dir", { "-s", "--scratch" },
-			"scratch dir where to put temp data", 1 },
+			{ "sep", { "--sep" }, "separate char between key and val", 1 },
 
-	{ "dbtype", { "--db" }, "dbtype (leveldb,rocksdb or default memdb)", 1 },
+			{ "sep_pos", { "--sp" }, "which separator are used to split key value. default 1 (first one)", 1 },
 
-	{ "zip_output", { "-z", "--zip" }, "zip output files", 0 },
+			{ "dbtype", { "--db" }, "dbtype (leveldb,rocksdb or default memdb)",
+					1 },
 
-	{ "kmer_length", { "-k", "--kmer-length" }, "length of kmer", 1 },
+			{ "zip_output", { "-z", "--zip" }, "zip output files", 0 },
 
-	{ "output", { "-o", "--output" }, "output folder", 1 },
+			{ "output", { "-o", "--output" }, "output folder", 1 },
 
-	{ "without_canonical_kmer", { "--without-canonical-kmer" },
-			"do not use canonical kmer", 0 },
+					{ "num_bucket", { "-n", "--num-bucket" },
+							"process input as n bucket (save memory, trade space with time)",
+							1 },
 
-	} };
+					{ "append_merge", { "--append-merge" },
+							"merge as append instead of sum", 0 },
+
+			} };
 
 	argagg::parser_results args;
 	try {
@@ -157,22 +175,26 @@ int main(int argc, char **argv) {
 		std::cerr << argparser;
 		return EXIT_SUCCESS;
 	}
-	if (!args.pos.empty()) {
-		std::cerr << "no positional argument is allowed" << endl;
-		return EXIT_SUCCESS;
+
+	config.num_bucket = args["num_bucket"].as<int>(1);
+	if (args["sep"]) {
+		string s = args["sep"].as<string>();
+		if (s == "\\t") {
+			config.sep = '\t';
+		} else if (s.length() != 1) {
+			myerror("separator can only be a a single char, but got '%s'",
+					s.c_str());
+			return EXIT_SUCCESS;
+		} else {
+			config.sep = s.at(0);
+		}
+	} else {
+		config.sep = '\t';
 	}
 
-	if (args["without_canonical_kmer"]) {
-		config.without_canonical_kmer = true;
-	} else {
-		config.without_canonical_kmer = false;
-	}
-
-	if (args["zip_output"]) {
-		config.zip_output = true;
-	} else {
-		config.zip_output = false;
-	}
+	config.sep_pos= args["sep_pos"].as<int>(1);
+	config.append_merge = args["append_merge"];
+	config.zip_output = args["zip_output"];
 
 	if (args["dbtype"]) {
 		std::string dbtype = args["dbtype"].as<std::string>();
@@ -198,36 +220,29 @@ int main(int argc, char **argv) {
 		config.dbtype = DBHelper::MEMORY_DB;
 	}
 
-	check_arg(args, (char*) "kmer_length");
-	config.kmer_length = args["kmer_length"].as<int>();
-	if (config.kmer_length < 1) {
-		cerr << "Error, length of kmer :  " << config.kmer_length << endl;
-		return EXIT_FAILURE;
-	}
+	config.scratch_dir = args["scratch_dir"].as<string>(get_working_dir());
+	config.port = args["port"].as<int>(7979);
 
-	if (args["scratch_dir"]) {
-		config.scratch_dir = args["scratch_dir"].as<string>();
+	if (args.pos.empty()) {
+		std::cerr << "no input files are provided" << endl;
+		return EXIT_SUCCESS;
 	} else {
-		config.scratch_dir = get_working_dir();
+		config.inputpath = args.all_as<string>();
+		bool b_error = false;
+		for (size_t i = 0; i < config.inputpath.size(); i++) {
+			if (!dir_exists(config.inputpath.at(i).c_str())) {
+				cerr << "Error, input dir does not exists:  "
+						<< config.inputpath.at(i) << endl;
+				b_error = true;
+			}
+		}
+		if (b_error) {
+			return EXIT_FAILURE;
+		}
 	}
 
-	if (args["port"]) {
-		config.port = args["port"].as<int>();
-	} else {
-		config.port = 7979;
-	}
-
-	check_arg(args, (char*) "input");
-	string inputpath = args["input"].as<string>();
-	config.inputpath = inputpath;
-	check_arg(args, (char*) "output");
 	string outputpath = args["output"].as<string>();
 	config.outputpath = outputpath;
-
-	if (!dir_exists(inputpath.c_str())) {
-		cerr << "Error, input dir does not exists:  " << inputpath << endl;
-		return EXIT_FAILURE;
-	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
 	if (rank == 0) {
@@ -244,36 +259,48 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	std::vector<std::string> input = list_dir(inputpath.c_str());
+	std::vector<std::string> input;
+	for (size_t i = 0; i < config.inputpath.size(); i++) {
+		std::vector<std::string> v = list_dir(config.inputpath.at(i).c_str());
+		input.insert(input.end(), v.begin(), v.end());
+	}
+	sort(input.begin(), input.end());
+	input.erase(unique(input.begin(), input.end()), input.end());
+	shuffle(input);
+
 	if (input.size() == 0) {
-		cerr << "Error, input dir is empty " << outputpath << endl;
+		cerr << "Error, no input found " << endl;
 		return EXIT_FAILURE;
 	} else {
 		if (rank == 0) {
 			myinfo("#of inputs = %ld", input.size());
 		}
 	}
-	std::vector<std::string> myinput;
-	for (size_t i = 0; i < input.size(); i++) {
-		std::string filename = input.at(i);
-		if ((int) ( fnv_hash(filename) % size) == rank) {
-			myinput.push_back(input.at(i));
+
+	for (int b = 0; b < config.num_bucket; b++) {
+		std::vector<std::string> myinput;
+		for (size_t i = 0; i < input.size(); i++) {
+			std::string filename = input.at(i);
+			if ((int) (fnv_hash(filename) % size) == b) {
+				myinput.push_back(filename);
+			}
 		}
+
+		run_bucket(b, myinput, config);
+
 	}
-	myinfo("#of my inputs = %ld", myinput.size());
-	run(myinput, config);
 	MPI_Finalize();
 
 	return 0;
 }
 
-void get_peers_information(Config &config) {
+void get_peers_information(int bucket, Config &config) {
 	int rank = config.rank;
 
 	for (int p = 0; p < config.nprocs; p++) { //p:  a peer
 		int buf;
 		if (rank == p) {
-			buf = config.get_my_port();
+			buf = config.get_my_port(bucket);
 		}
 
 		/* everyone calls bcast, data is taken from root and ends up in everyone's buf */
@@ -295,6 +322,7 @@ void get_peers_information(Config &config) {
 	}
 
 }
+
 void reshuffle_rank(Config &config) {
 
 	int nproc = config.nprocs;
@@ -317,18 +345,37 @@ void reshuffle_rank(Config &config) {
 			myinfo("hash %d will be sent to rank %d", i, buf[i]);
 		}
 	}
-
 }
 
-int run(const std::vector<std::string> &input, Config &config) {
+int run_bucket(int bucket, const std::vector<std::string> &input,
+		Config &config) {
+	if (config.rank == 0) {
+		myinfo("Start running bucket %d", bucket);
+	}
+
+	std::vector<std::string> myinput;
+	for (size_t i = 0; i < input.size(); i++) {
+		std::string filename = input.at(i);
+		if ((int) (fnv_hash(filename) % config.nprocs) == config.rank) {
+			myinput.push_back(input.at(i));
+		}
+	}
+	myinfo("bucket %d: #of my inputs = %ld", bucket, myinput.size());
+	return run(bucket, myinput, config);
+}
+
+int run(int bucket, const std::vector<std::string> &input, Config &config) {
 	if (config.rank == 0) {
 		config.print();
 	}
 	reshuffle_rank(config);
-	get_peers_information(config);
-	KmerCountingListener listener(config.mpi_ipaddress, config.get_my_port(),
-			config.get_dbpath(), config.dbtype, true);
-	myinfo("Starting listener");
+	get_peers_information(bucket, config);
+	MergeListener listener(config.mpi_ipaddress, config.get_my_port(bucket),
+			config.get_dbpath(bucket), config.dbtype,
+			config.append_merge/*similar as kr mapping*/);
+	if (config.rank == 0) {
+		myinfo("Starting listener");
+	}
 	int status = listener.start();
 	if (status != 0) {
 		myerror("Start listener failed.");
@@ -337,9 +384,11 @@ int run(const std::vector<std::string> &input, Config &config) {
 
 	//wait for all server is ready
 	MPI_Barrier(MPI_COMM_WORLD);
-	myinfo("Starting client");
-	KmerCountingClient client(config.peers_ports, config.peers_hosts,
-			config.hash_rank_mapping, true);
+	if (config.rank == 0) {
+		myinfo("Starting client");
+	}
+	MergeClient client(config.peers_ports, config.peers_hosts,
+			config.hash_rank_mapping);
 	if (client.start() != 0) {
 		myerror("Start client failed");
 		MPI_Abort( MPI_COMM_WORLD, -1);
@@ -347,20 +396,19 @@ int run(const std::vector<std::string> &input, Config &config) {
 
 	for (size_t i = 0; i < input.size(); i++) {
 		myinfo("processing %s", input.at(i).c_str());
-		client.process_seq_file(input.at(i), config.kmer_length,
-				config.without_canonical_kmer);
+		client.process_input_file(input.at(i), config.sep, config.sep_pos);
 	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	client.stop();
-	myinfo("Total sent %ld kmers", client.get_n_sent());
+	myinfo("Total sent %ld records", client.get_n_sent());
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	//cleanup listener and db
 	listener.stop();
-	myinfo("Total recved %ld kmers", listener.get_n_recv());
-	listener.dumpdb(config.get_my_output());
+	myinfo("Total recved %ld records", listener.get_n_recv());
+	listener.dumpdb(config.get_my_output(bucket));
 	listener.removedb();
 
 	return 0;

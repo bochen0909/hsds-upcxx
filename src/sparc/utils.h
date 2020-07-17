@@ -53,6 +53,7 @@ inline std::string trim_copy(std::string s);
 
 void shuffle(std::vector<int>& v);
 
+void shuffle(std::vector<std::string> &v);
 
 std::vector<std::string> split(const std::string &source,
 		const char *delimiter = " ", bool keepEmpty = false);

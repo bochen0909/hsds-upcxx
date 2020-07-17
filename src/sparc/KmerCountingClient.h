@@ -29,8 +29,8 @@ protected:
 	inline virtual void map_line(const std::string &line, int kmer_length,
 			bool without_canonical_kmer, std::vector<std::string> &kmers,
 			std::vector<uint32_t> &nodeids);
-	virtual void send_kmers(const std::vector<std::string> &kmers,
-			const std::vector<uint32_t> &nodeids);
+	template<typename V> void send_kmers(const std::vector<string> &kmers,
+			const std::vector<V> &nodeids);
 protected:
 	std::vector<int> peers_ports;
 	std::vector<int> hash_rank_mapping;

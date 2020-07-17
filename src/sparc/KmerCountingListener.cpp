@@ -79,7 +79,7 @@ void* KmerCountingListener::thread_run(void *vargp) {
 				throw -1;
 			}
 			assert(N + 1 == v.size());
-			for (size_t i = 1; i < N; i++) {
+			for (size_t i = 1; i < v.size(); i++) {
 				if (self.do_kr_mapping) {
 					stringstream ss(v.at(i));
 					string kmer;
@@ -134,7 +134,10 @@ int KmerCountingListener::removedb() {
 	}
 	return 0;
 }
-int KmerCountingListener::start() {
+int KmerCountingListener::start(PTHREAD_RUN_FUN thread_fun) {
+	if(thread_fun==NULL){
+		thread_fun=thread_run;
+	}
 	if (dbtype == DBHelper::LEVEL_DB) {
 #ifdef BUILD_WITH_LEVELDB
 		dbhelper = new LevelDBHelper(dbpath);
@@ -154,7 +157,7 @@ int KmerCountingListener::start() {
 		}
 	}
 	dbhelper->create();
-	pthread_create(&thread_id, NULL, thread_run, this);
+	pthread_create(&thread_id, NULL, thread_fun, this);
 	return 0;
 }
 

@@ -81,10 +81,10 @@ int KmerCountingClient::start() {
 	}
 	return 0;
 }
-void KmerCountingClient::send_kmers(const std::vector<string> &kmers,
-		const std::vector<uint32_t> &nodeids) {
+template<typename V> void KmerCountingClient::send_kmers(const std::vector<string> &kmers,
+		const std::vector<V> &nodeids) {
 	std::map<size_t, std::vector<string>> kmermap;
-	std::map<size_t, std::vector<uint32_t>> nodeidmap;
+	std::map<size_t, std::vector<V>> nodeidmap;
 	size_t npeers = peers.size();
 	for (size_t i = 0; i < kmers.size(); i++) {
 		const string &s = kmers.at(i);
@@ -109,7 +109,7 @@ void KmerCountingClient::send_kmers(const std::vector<string> &kmers,
 			ss << N << deli;
 
 			if (do_kr_mapping) {
-				std::vector<uint32_t> &v = nodeidmap.at(it->first);
+				std::vector<V> &v = nodeidmap.at(it->first);
 				for (size_t i = 0; i < N; i++) {
 					ss << it->second.at(i) << " " << v.at(i) << deli;
 					++n_send;
@@ -130,7 +130,7 @@ void KmerCountingClient::send_kmers(const std::vector<string> &kmers,
 			message << N;
 
 			if (do_kr_mapping) {
-				std::vector<uint32_t> &v = nodeidmap.at(it->first);
+				std::vector<V> &v = nodeidmap.at(it->first);
 				for (size_t i = 0; i < N; i++) {
 					message << it->second.at(i) << v.at(i);
 					++n_send;
@@ -215,3 +215,8 @@ int KmerCountingClient::process_seq_file(const std::string &filepath,
 
 	return 0;
 }
+template void KmerCountingClient::send_kmers(const std::vector<string>&,
+		const std::vector<size_t>&);
+
+template void KmerCountingClient::send_kmers(const std::vector<string>&,
+		const std::vector<std::string>&);

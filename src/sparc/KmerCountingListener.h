@@ -11,6 +11,8 @@
 #include <string>
 #include "DBHelper.h"
 
+typedef void* (*PTHREAD_RUN_FUN)(void*);
+
 class KmerCountingListener {
 public:
 	KmerCountingListener(const std::string &hostname, int port,
@@ -18,15 +20,14 @@ public:
 			bool do_kr_mapping = false);
 	virtual ~KmerCountingListener();
 
-	int start();
-	int stop();
-	uint64_t get_n_recv();
-	int removedb();
-	int dumpdb(const std::string &filepath, char sep = '\t');
-
+	virtual int start(PTHREAD_RUN_FUN fun = NULL);
+	virtual int stop();
+	virtual uint64_t get_n_recv();
+	virtual int removedb();
+	virtual int dumpdb(const std::string &filepath, char sep = '\t');
 protected:
 	static void* thread_run(void *vargp);
-private:
+protected:
 	std::string hostname;
 	int port;
 	bool going_stop;

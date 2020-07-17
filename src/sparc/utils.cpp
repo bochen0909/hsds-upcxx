@@ -167,6 +167,12 @@ void shuffle(std::vector<int> &v) {
 	std::shuffle(std::begin(v), std::end(v), rng);
 }
 
+void shuffle(std::vector<std::string> &v) {
+	std::random_device rd;
+	std::default_random_engine rng(rd());
+	std::shuffle(std::begin(v), std::end(v), rng);
+}
+
 std::vector<std::string> split(const std::string &source, const char *delimiter,
 		bool keepEmpty) {
 	std::vector<std::string> results;

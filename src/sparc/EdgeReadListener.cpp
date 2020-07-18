@@ -17,23 +17,84 @@
 #include "LevelDBHelper.h"
 #endif
 
+#include "const.h"
 #include "EdgeReadListener.h"
 
 using namespace std;
 
 EdgeReadListener::EdgeReadListener(const std::string &hostname, int port,
-		const std::string &dbpath, DBHelper::DBTYPE dbtype) :
-		KmerCountingListener(hostname, port, dbpath, dbtype, false), edges(NULL) {
+		const std::string &dbpath, DBHelper::DBTYPE dbtype,
+		NodeCollection *edges) :
+		KmerCountingListener(hostname, port, dbpath, dbtype, false), edges(
+				edges) {
 
 }
 
 EdgeReadListener::~EdgeReadListener() {
 }
 
+NodeCollection* EdgeReadListener::getEdges() {
+	return edges;
+}
+
+inline void EdgeReadListener_initial_graph(zmqpp::message &message,
+		EdgeReadListener &self, zmqpp::socket &socket) {
+	NodeCollection &edges = *self.getEdges();
+
+	if (true) {
+		uint32_t a;
+		uint32_t b;
+		float w;
+		message >> a >> b >> w;
+		edges[a].neighbors.push_back( { b, w });
+		self.inc_recv();
+	}
+	zmqpp::message message2;
+	message2 << "OK";
+	socket.send(message2);
+}
+
+inline void EdgeReadListener_on_notifed_changed(zmqpp::message &message,
+		EdgeReadListener &self, zmqpp::socket &socket) {
+	NodeCollection &edges = *self.getEdges();
+
+	if (true) {
+		size_t N;
+		message >> N;
+		for (size_t i = 0; i < N; i++) {
+			uint32_t a;
+			message >> a;
+#ifdef DEBUG
+		assert (edges.find(a)!=edges.end());
+#endif
+			edges[a].changed = true;
+			self.inc_recv();
+		}
+	}
+	zmqpp::message message2;
+	message2 << "OK";
+	socket.send(message2);
+}
+
+inline void EdgeReadListener_query_node(zmqpp::message &message,
+		EdgeReadListener &self, zmqpp::socket &socket) {
+	NodeCollection &edges = *self.getEdges();
+	if (true) {
+		uint32_t a;
+		message >> a;
+#ifdef DEBUG
+		assert (edges.find(a)!=edges.end());
+#endif
+		self.inc_recv();
+		zmqpp::message message2;
+		message2 << edges.at(a).label;
+		socket.send(message2);
+	}
+}
+
 void* EdgeReadListener::listener_thread_run(void *vargp) {
 	EdgeReadListener &self = *(EdgeReadListener*) vargp;
-	robin_hood::unordered_map<uint32_t, std::vector<EdgeEnd>> &edges =
-			*self.edges;
+
 	self.n_recv = 0;
 	self.thread_stopped = false;
 	string endpoint = "tcp://" + self.hostname + ":"
@@ -57,54 +118,19 @@ void* EdgeReadListener::listener_thread_run(void *vargp) {
 		if (!socket.receive(message)) {
 			continue;
 		}
-		bool b_compress_message;
-		message >> b_compress_message;
-		if (b_compress_message) {
-			LZ4String lz4str;
-			message >> lz4str;
-			string s = lz4str.toString();
-			//cout << "recv " << s << endl;
-			std::vector<std::string> v;
-			sparc::split(v, s, ",");
-			size_t N = std::stoul(v.at(0));
-			if (N + 1 != v.size()) {
-				myerror("expected %ld items, but got %ld:\n", N - 1, v.size(),
-						s.c_str());
-				throw -1;
-			}
-			assert(N + 1 == v.size());
-			for (size_t i = 1; i < v.size(); i++) {
-				stringstream ss(v.at(i));
 
-				uint32_t a;
-				uint32_t b;
-				float w;
-				ss >> a >> b >> w;
-				edges[a].push_back( { b, w });
-
-				++self.n_recv;
-			}
-
+		int8_t prefix;
+		message >> prefix;
+		if (prefix == LPAV1_INIT_GRAPH) { // initial graph
+			EdgeReadListener_initial_graph(message, self, socket);
+		} else if (prefix == LPAV1_QUERY_LABELS) { //query
+			EdgeReadListener_query_node(message, self, socket);
+		} else if (prefix == LPAV1_UPDATE_CHANGED) { //update changed
+			EdgeReadListener_on_notifed_changed(message, self, socket);
 		} else {
-			size_t N;
-			message >> N;
-			for (size_t i = 0; i < N; i++) {
-				string key;
-				string val;
-				message >> key >> val;
-				stringstream ss(val);
-
-				uint32_t a = std::stoul(key);
-				uint32_t b;
-				float w;
-				ss >> b >> w;
-				edges[a].push_back( { b, w });
-				++self.n_recv;
-			}
+			myerror("unknown message type '%d'", prefix);
 		}
-		zmqpp::message message2;
-		message2 << "OK";
-		socket.send(message2);
+
 	}
 
 	//std::this_thread::sleep_for(std::chrono::milliseconds(5000));
@@ -113,12 +139,8 @@ void* EdgeReadListener::listener_thread_run(void *vargp) {
 	pthread_exit(NULL);
 }
 
-int EdgeReadListener::start(
-		robin_hood::unordered_map<uint32_t, std::vector<EdgeEnd>> *edges) {
+int EdgeReadListener::start() {
 	PTHREAD_RUN_FUN fun = listener_thread_run;
-
-	this->edges = edges;
-
 	return KmerCountingListener::start(fun);
 
 }

@@ -16,19 +16,31 @@ class LPAClient: public ZMQClient {
 public:
 	LPAClient(const std::vector<int> &peers_ports,
 			const std::vector<std::string> &peers_hosts,
-			const std::vector<int> &hash_rank_mapping, LPAState& state);
+			const std::vector<int> &hash_rank_mapping, size_t smin,
+			bool weighted, int rank);
 	virtual ~LPAClient();
-	void run(int max_iteration);
-protected:
-	void query_node(uint32_t node, std::vector<EdgeEnd> &nbr_labels);
+
+	int process_input_file(const std::string &filepath);
+
+	NodeCollection* getNode();
+
+	void print();
+
+	LPAState& getState();
 
 	void run_iteration(int i);
 
+protected:
+	void query_and_update_nodes();
+	void notify_changed_nodes();
 
+	inline void send_edge(std::vector<uint32_t> &from,
+			std::vector<uint32_t> &to, std::vector<float> &weight);
 
 private:
-	LPAState& state;
-	EdgeCollection& edges;
+	LPAState state;
+	bool weighted = false;
+	int rank;
 };
 
 #endif /* SUBPROJECTS__SPARC_MPI_SRC_SPARC_LPACLIENT_H_ */

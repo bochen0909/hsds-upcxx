@@ -40,24 +40,24 @@ public:
 
 	}
 
-	void put(const std::string &key, uint32_t val) {
+	void put(const std::string&, uint32_t) {
 		throw -1;
 	}
-	void put(const std::string &key, const std::string &val) {
-		throw -1;
-	}
-
-	void put(const std::string &key, const LZ4String &val) {
+	void put(const std::string&, const std::string&) {
 		throw -1;
 	}
 
-	void incr(const std::string &key, uint32_t n = 1) {
+	void put(const std::string&, const LZ4String&) {
 		throw -1;
 	}
-	void append(const std::string &key, uint32_t n) {
+
+	void incr(const std::string&, uint32_t) {
 		throw -1;
 	}
-	void append(const std::string &key, const std::string &val) {
+	void append(const std::string&, uint32_t) {
+		throw -1;
+	}
+	void append(const std::string&, const std::string&) {
 		throw -1;
 	}
 

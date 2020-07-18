@@ -14,13 +14,15 @@
 class EdgeReadListener: public KmerCountingListener {
 public:
 	EdgeReadListener(const std::string &hostname, int port,
-			const std::string &dbpath, DBHelper::DBTYPE dbtype);
+			const std::string &dbpath, DBHelper::DBTYPE dbtype,
+			NodeCollection *edges);
 	virtual ~EdgeReadListener();
-	int start(robin_hood::unordered_map<uint32_t, std::vector<EdgeEnd>> *edges);
+	int start();
+	NodeCollection* getEdges();
 protected:
 	static void* listener_thread_run(void *vargp);
 
-	robin_hood::unordered_map<uint32_t, std::vector<EdgeEnd>> *edges;
+	NodeCollection *edges;
 
 };
 

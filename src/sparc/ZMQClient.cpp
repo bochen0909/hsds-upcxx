@@ -25,7 +25,8 @@ ZMQClient::ZMQClient(const std::vector<int> &peers_ports,
 		const std::vector<std::string> &peers_hosts,
 		const std::vector<int> &hash_rank_mapping) :
 		peers_ports(peers_ports), peers_hosts(peers_hosts), hash_rank_mapping(
-				hash_rank_mapping), context(NULL), n_send(0) {
+				hash_rank_mapping), context(NULL), n_send(0), b_compress_message(
+				false) {
 	assert(peers_hosts.size() == peers_ports.size());
 
 	std::string v = get_env("SPARC_COMPRESS_MESSAGE");

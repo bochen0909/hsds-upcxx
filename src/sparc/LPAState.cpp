@@ -7,26 +7,32 @@
 
 #include <unordered_map>
 #include <iostream>
+#include <assert.h>
 #include "gzstream.h"
 #include "utils.h"
 #include "log.h"
 #include "LPAState.h"
 
-LPAState::LPAState(EdgeCollection *edges) :
-		LPAState(edges, -1) {
+LPAState::LPAState(uint32_t smin) :
+		smin(smin) {
 
 }
-LPAState::LPAState(EdgeCollection *edges, uint32_t smin) :
-		edges(edges), smin(smin) {
-	for (EdgeCollection::iterator itor = edges->begin(); itor != edges->end();
+
+void LPAState::init() {
+	for (NodeCollection::iterator itor = edges.begin(); itor != edges.end();
 			itor++) {
-		this->labels[itor->first] = itor->first;
+		itor->second.label = itor->first;
+		itor->second.changed = true;
 	}
 
 }
 
-EdgeCollection& LPAState::get_edges() {
-	return *edges;
+NodeCollection& LPAState::get_edges() {
+	return edges;
+}
+
+NodeCollection* LPAState::getNodes() {
+	return &edges;
 }
 
 void LPAState::set_changed(uint64_t b) {
@@ -36,12 +42,14 @@ uint64_t LPAState::changed() {
 	return nchanged;
 }
 
-void LPAState::update(uint32_t node, const std::vector<EdgeEnd> &nbrs) {
-	if (!nbrs.empty()) {
+void LPAState::update(uint32_t node, const std::vector<uint32_t> &nbr_labels,
+		const std::vector<float> &nbr_weights) {
+	if (!nbr_labels.empty()) {
 		std::unordered_map<uint32_t, float> m;
-		for (auto &i : nbrs) {
-			if (i.node < smin) {
-				m[i.node] += i.weight;
+		for (size_t i = 0; i < nbr_labels.size(); i++) {
+			uint32_t label = nbr_labels.at(i);
+			if (label < smin) {
+				m[label] += nbr_weights.at(i);
 			}
 		}
 		if (!m.empty()) {
@@ -51,12 +59,20 @@ void LPAState::update(uint32_t node, const std::vector<EdgeEnd> &nbrs) {
 				if (kv.second > maxweight) {
 					maxweight = kv.second;
 					maxlabel = kv.first;
+				} else if (kv.second == maxweight) {
+					if (maxweight > kv.first) {
+						maxweight = kv.second;
+						maxlabel = kv.first;
+					}
 				}
 			}
 
-			if (labels[node] != maxlabel) {
-				labels[node] = maxlabel;
+			if (edges.at(node).label != maxlabel) {
+				edges.at(node).label = maxlabel;
+				edges.at(node).changed = true;
 				nchanged++;
+			} else {
+				edges.at(node).changed = false;
 			}
 		}
 	}
@@ -74,10 +90,10 @@ int LPAState::dump(const std::string &filepath, char sep) {
 		myfile_pointer = new std::ofstream(filepath.c_str());
 	}
 	std::ostream &myfile = *myfile_pointer;
-	robin_hood::unordered_map<uint32_t, uint32_t>::iterator it = labels.begin();
+
 	uint64_t n = 0;
-	for (; it != labels.end(); it++) {
-		myfile << it->first << sep << it->second << std::endl;
+	for (NodeCollection::iterator it = edges.begin(); it != edges.end(); it++) {
+		myfile << it->first << sep << it->second.label << std::endl;
 		++n;
 	}
 	if (sparc::endswith(filepath, ".gz")) {
@@ -91,3 +107,29 @@ int LPAState::dump(const std::string &filepath, char sep) {
 
 }
 
+void LPAState::init_check() {
+	for (NodeCollection::iterator it = edges.begin(); it != edges.end(); it++) {
+		assert(it->second.changed);
+		assert(it->second.label == it->first);
+	}
+}
+
+size_t LPAState::getNumActivateNode() {
+	size_t sum = 0;
+	for (NodeCollection::iterator it = edges.begin(); it != edges.end(); it++) {
+		if (it->second.changed) {
+			sum++;
+		}
+	}
+	return sum;
+
+}
+
+void LPAState::print() {
+	myinfo("smin=%ld", smin);
+	myinfo("n_changed=%ld", nchanged);
+	for (NodeCollection::iterator it = edges.begin(); it != edges.end(); it++) {
+		myinfo("node=%ld: %s", it->first, it->second.to_string().c_str());
+	}
+
+}

@@ -13,7 +13,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -ggdb")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -ggdb -DDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -s")
 
 
@@ -264,6 +264,7 @@ if(BUILD_SPARC_MIMIR)
 		src/kmer.cpp src/sparc/log.cpp 
 		src/sparc/KmerCountingListener.cpp
 		src/sparc/KmerCountingClient.cpp
+		src/sparc/ZMQClient.cpp
 		src/sparc/DBHelper.cpp
 		src/sparc/LZ4String.cpp
 		src/sparc/utils.cpp
@@ -273,6 +274,7 @@ if(BUILD_SPARC_MIMIR)
 		src/kmer.cpp src/sparc/log.cpp 
 		src/sparc/KmerCountingListener.cpp
 		src/sparc/KmerCountingClient.cpp
+		src/sparc/ZMQClient.cpp
 		src/sparc/DBHelper.cpp
 		src/sparc/LZ4String.cpp
 		src/sparc/utils.cpp
@@ -284,6 +286,7 @@ if(BUILD_SPARC_MIMIR)
 		src/sparc/KmerCountingListener.cpp
 		src/sparc/EdgeCountingClient.cpp
 		src/sparc/KmerCountingClient.cpp
+		src/sparc/ZMQClient.cpp
 		src/sparc/DBHelper.cpp
 		src/sparc/LZ4String.cpp
 		src/sparc/utils.cpp
@@ -295,6 +298,7 @@ if(BUILD_SPARC_MIMIR)
 		src/sparc/MergeListener.cpp		 
 		src/sparc/KmerCountingListener.cpp
 		src/sparc/KmerCountingClient.cpp
+		src/sparc/ZMQClient.cpp
 		src/sparc/DBHelper.cpp
 		src/sparc/LZ4String.cpp
 		src/sparc/utils.cpp
@@ -302,13 +306,11 @@ if(BUILD_SPARC_MIMIR)
 		)	
 
 	add_executable(lpav1_mpi 
-		#src/merge_intrmed_mpi.cpp
+		src/lpav1_mpi.cpp
 		src/sparc/LPAState.cpp
 		src/sparc/LPAClient.cpp
 		src/sparc/ZMQClient.cpp
-		src/sparc/KmerCountingClient.cpp
 		src/sparc/KmerCountingListener.cpp		 
-		src/sparc/EdgeReadClient.cpp
 		src/sparc/EdgeReadListener.cpp
 		src/sparc/DBHelper.cpp
 		src/sparc/LZ4String.cpp

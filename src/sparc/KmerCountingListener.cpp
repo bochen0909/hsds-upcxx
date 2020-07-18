@@ -128,6 +128,9 @@ int KmerCountingListener::dumpdb(const string &filepath, char sep) {
 	return 0;
 }
 
+void KmerCountingListener::inc_recv(){
+	n_recv++;
+}
 int KmerCountingListener::removedb() {
 	if (dbhelper) {
 		dbhelper->remove();

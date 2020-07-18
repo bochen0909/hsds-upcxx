@@ -25,12 +25,12 @@ protected:
 
 protected:
 	std::vector<int> peers_ports;
-	std::vector<int> hash_rank_mapping;
 	std::vector<std::string> peers_hosts;
+	std::vector<int> hash_rank_mapping;
 	std::vector<zmqpp::socket*> peers;
 	zmqpp::context *context;
 	uint64_t n_send;
-	bool b_compress_message=false;
+	bool b_compress_message;
 };
 
 

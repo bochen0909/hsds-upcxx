@@ -8,6 +8,7 @@
 #ifndef SUBPROJECTS__SPARC_MPI_SRC_SPARC_LPASTATE_H_
 #define SUBPROJECTS__SPARC_MPI_SRC_SPARC_LPASTATE_H_
 
+#include <sstream>
 #include <vector>
 #include "robin_hood.h"
 
@@ -16,27 +17,50 @@ struct EdgeEnd {
 	float weight;
 };
 
-typedef robin_hood::unordered_map<uint32_t, std::vector<EdgeEnd>> EdgeCollection;
+struct NodeInfo {
+	std::vector<EdgeEnd> neighbors;
+	uint32_t label;
+	bool changed;
+	std::string to_string() {
+		std::stringstream ss;
+		ss << "changed=" << (changed ? "true" : "false") << " label=" << label
+				<< " neighbors=[";
+		for (auto &ee : neighbors) {
+			ss << ee.node << ":" << ee.weight << " ";
+		}
+		ss << "\b" << "]";
+		return ss.str();
+	}
+
+};
+
+typedef robin_hood::unordered_map<uint32_t, NodeInfo> NodeCollection;
 
 class LPAState {
 public:
-	LPAState(EdgeCollection *edges);
-	LPAState(EdgeCollection *edges, uint32_t smin);
+	LPAState(uint32_t smin);
 	virtual ~LPAState();
 
-	EdgeCollection& get_edges();
+	NodeCollection& get_edges();
+	NodeCollection* getNodes();
 
-	void update(uint32_t node, const std::vector<EdgeEnd> &nbrs);
+	void update(uint32_t node, const std::vector<uint32_t> &nbr_labels,
+			const std::vector<float> &nbr_weights);
 	void set_changed(uint64_t);
 	uint64_t changed();
 	int dump(const std::string &filepath, char sep = '\t');
+
+	void print();
+	void init();
+	void init_check();
+
+	size_t getNumActivateNode();
 private:
-	EdgeCollection *edges;
-	robin_hood::unordered_map<uint32_t, uint32_t> labels;
+	NodeCollection edges;
 
 	uint32_t smin;
 
-	uint64_t nchanged=0;
+	uint64_t nchanged = 0;
 
 };
 

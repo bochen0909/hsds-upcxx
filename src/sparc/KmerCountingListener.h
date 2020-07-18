@@ -24,6 +24,7 @@ public:
 	virtual int stop();
 	virtual uint64_t get_n_recv();
 	virtual int removedb();
+	virtual void inc_recv();
 	virtual int dumpdb(const std::string &filepath, char sep = '\t');
 protected:
 	static void* thread_run(void *vargp);

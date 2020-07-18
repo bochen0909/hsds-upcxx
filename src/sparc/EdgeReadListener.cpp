@@ -10,7 +10,7 @@
 #include <iostream>
 #include <zmqpp/zmqpp.hpp>
 #include "log.h"
-#include "LZ4String.h"
+#include "Message.h"
 #include "DBHelper.h"
 #include "utils.h"
 #ifdef BUILD_WITH_LEVELDB
@@ -42,10 +42,12 @@ inline void EdgeReadListener_initial_graph(zmqpp::message &message,
 	NodeCollection &edges = *self.getEdges();
 
 	if (true) {
+		Message msg;
+		message >> msg;
 		uint32_t a;
 		uint32_t b;
 		float w;
-		message >> a >> b >> w;
+		msg >> a >> b >> w;
 		edges[a].neighbors.push_back( { b, w });
 		self.inc_recv();
 	}
@@ -59,11 +61,13 @@ inline void EdgeReadListener_on_notifed_changed(zmqpp::message &message,
 	NodeCollection &edges = *self.getEdges();
 
 	if (true) {
+		Message msg;
+		message >> msg;
 		size_t N;
-		message >> N;
+		msg >> N;
 		for (size_t i = 0; i < N; i++) {
 			uint32_t a;
-			message >> a;
+			msg >> a;
 #ifdef DEBUG
 		assert (edges.find(a)!=edges.end());
 #endif

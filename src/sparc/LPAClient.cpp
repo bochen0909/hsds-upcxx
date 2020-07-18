@@ -11,6 +11,7 @@
 #include "utils.h"
 
 #include "const.h"
+#include "Message.h"
 #include "LPAClient.h"
 
 using namespace std;
@@ -82,13 +83,14 @@ void LPAClient::notify_changed_nodes() {
 		uint32_t rank = kv.first;
 		zmqpp::socket *socket = peers[rank];
 
-		zmqpp::message message;
-		message << LPAV1_UPDATE_CHANGED;
-		message << kv.second.size();
-		for (uint32_t node : kv.second) {
-			message << node;
-		}
+		Message mymsg(b_compress_message);
 
+		mymsg << kv.second.size();
+		for (uint32_t node : kv.second) {
+			mymsg << node;
+		}
+		zmqpp::message message;
+		message << LPAV1_UPDATE_CHANGED << mymsg;
 		socket->send(message);
 		zmqpp::message message2;
 		socket->receive(message2);
@@ -112,9 +114,10 @@ void LPAClient::send_edge(std::vector<uint32_t> &from,
 		uint32_t rank = fnv_hash(a) % npeers;
 		zmqpp::socket *socket = peers[rank];
 
+		Message mymsg(b_compress_message);
+		mymsg << a << b << w;
 		zmqpp::message message;
-		message << LPAV1_INIT_GRAPH;
-		message << a << b << w;
+		message << LPAV1_INIT_GRAPH << mymsg;
 		socket->send(message);
 		n_send++;
 		zmqpp::message message2;
@@ -147,7 +150,7 @@ inline void edge_read_client_line(const std::string &line,
 		std::vector<uint32_t> &from, std::vector<uint32_t> &to,
 		std::vector<float> &weight, bool weighted) {
 
-	if(line.empty()){
+	if (line.empty()) {
 		return;
 	}
 	if (isdigit(line.at(0))) {
@@ -215,14 +218,14 @@ int LPAClient::process_input_file(const std::string &filepath) {
 	return 0;
 }
 
-LPAState& LPAClient::getState(){
+LPAState& LPAClient::getState() {
 	return state;
 }
 
-void LPAClient::print(){
+void LPAClient::print() {
 	myinfo("Client Info Start");
-	myinfo("weighted=%s", weighted? "true":"false");
-	myinfo("rank=%d",rank);
+	myinfo("weighted=%s", weighted ? "true" : "false");
+	myinfo("rank=%d", rank);
 	state.print();
 	myinfo("Client Info End");
 }

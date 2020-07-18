@@ -5,6 +5,7 @@
 
 #include "acutest.h"
 #include "sparc/LZ4String.h"
+#include "sparc/Message.h"
 
 using namespace std;
 
@@ -113,9 +114,120 @@ void test_LZ4String_and_zmq_message(void) {
 	}
 }
 
+void test_message(void) {
+	uint32_t a = 12222;
+	int8_t b = 12;
+	float c = 1.2345;
+
+	uint32_t a2;
+	int8_t b2;
+	float c2;
+	{
+		Message msg;
+		msg << a << b << c;
+
+		msg >> a2 >> b2 >> c2;
+		TEST_INT_EQUAL(a, a2);
+		TEST_INT_EQUAL(b, b2);
+		TEST_DOUBLE_EQUAL(c, c2);
+	}
+
+	{
+		Message msg;
+		msg << b << c << a;
+
+		msg >> b2 >> c2 >> a2;
+		TEST_INT_EQUAL(a, a2);
+		TEST_INT_EQUAL(b, b2);
+		TEST_DOUBLE_EQUAL(c, c2);
+	}
+
+	{
+		Message msg;
+		msg << a << b << c;
+
+		zmqpp::message message;
+		message << msg;
+
+		Message msg2;
+		message >> msg2;
+		msg2 >> a2 >> b2 >> c2;
+		TEST_INT_EQUAL(a, a2);
+		TEST_INT_EQUAL(b, b2);
+		TEST_DOUBLE_EQUAL(c, c2);
+	}
+	{
+		Message msg;
+		for (int i = 0; i < 100; i++) {
+			msg << a << b << c;
+		}
+
+		for (int i = 0; i < 100; i++) {
+			msg >> a2 >> b2 >> c2;
+			TEST_INT_EQUAL(a, a2);
+			TEST_INT_EQUAL(b, b2);
+			TEST_DOUBLE_EQUAL(c, c2);
+		}
+
+	}
+
+}
+
+void test_message_compressed(void) {
+	uint32_t a = 12222;
+	int8_t b = 12;
+	float c = 1.2345;
+	size_t d=123213414;
+	uint32_t a2;
+	int8_t b2;
+	float c2;
+	size_t d2;
+	{
+		Message msg(true);
+		msg << a << b << c << d;
+
+		zmqpp::message message;
+		message << msg;
+
+		Message msg2;
+		message >> msg2;
+		msg2 >> a2 >> b2 >> c2 >> d2;
+		TEST_INT_EQUAL(a, a2);
+		TEST_INT_EQUAL(b, b2);
+		TEST_DOUBLE_EQUAL(c, c2);
+		TEST_INT_EQUAL(d, d2);
+
+	}
+
+	{
+		Message msg(true);
+		for (int i = 0; i < 100; i++) {
+			msg << a << b << c;
+		}
+
+		zmqpp::message message;
+		message << msg;
+
+		Message msg2;
+		message >> msg2;
+		for (int i = 0; i < 100; i++) {
+			msg2 >> a2 >> b2 >> c2;
+			TEST_INT_EQUAL(a, a2);
+			TEST_INT_EQUAL(b, b2);
+			TEST_DOUBLE_EQUAL(c, c2);
+		}
+
+	}
+
+}
+
 TEST_LIST = { {"test_LZ4String", test_LZ4String},
 
 	{	"test_LZ4String_and_zmq_message", test_LZ4String_and_zmq_message},
+
+	{	"test_message", test_message},
+
+	{	"test_message_compressed",test_message_compressed},
 
 	{	NULL, NULL}};
 

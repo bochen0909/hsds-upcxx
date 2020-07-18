@@ -255,7 +255,7 @@ if(BUILD_SPARC_MIMIR)
 	link_directories( "${LOCAL_EXT_PREFIX_DIR}/lib" )
 	link_directories( "${LOCAL_EXT_PREFIX_DIR}/lib64" )
 
-	add_executable(test_lz4string src/test_lz4string.cpp src/sparc/LZ4String.cpp)
+	add_executable(test_lz4string src/test_lz4string.cpp src/sparc/LZ4String.cpp src/sparc/Message.cpp)
 	target_include_directories(test_lz4string PUBLIC "${LOCAL_EXT_PREFIX_DIR}/include" )
 	target_link_libraries(test_lz4string PUBLIC lz4 zmqpp zmq Threads::Threads)
 	
@@ -313,6 +313,7 @@ if(BUILD_SPARC_MIMIR)
 		src/sparc/KmerCountingListener.cpp		 
 		src/sparc/EdgeReadListener.cpp
 		src/sparc/DBHelper.cpp
+		src/sparc/Message.cpp
 		src/sparc/LZ4String.cpp
 		src/sparc/utils.cpp
 		src/kmer.cpp src/sparc/log.cpp		

@@ -46,12 +46,20 @@ void LPAState::update(uint32_t node, const std::vector<uint32_t> &nbr_labels,
 		const std::vector<float> &nbr_weights) {
 	if (!nbr_labels.empty()) {
 		std::unordered_map<uint32_t, float> m;
+		uint32_t mylabel = this->edges.at(node).label;
+		float sum_weight = 0;
+		size_t n_weight = 0;
 		for (size_t i = 0; i < nbr_labels.size(); i++) {
 			uint32_t label = nbr_labels.at(i);
 			if (label < smin) {
-				m[label] += nbr_weights.at(i);
+				float w = nbr_weights.at(i);
+				m[label] += w;
+				sum_weight += w;
+				n_weight++;
 			}
 		}
+		m[mylabel] += sum_weight / n_weight;
+
 		if (!m.empty()) {
 			uint32_t maxweight = 0;
 			uint32_t maxlabel = 0;
@@ -60,7 +68,7 @@ void LPAState::update(uint32_t node, const std::vector<uint32_t> &nbr_labels,
 					maxweight = kv.second;
 					maxlabel = kv.first;
 				} else if (kv.second == maxweight) {
-					if (maxweight > kv.first) {
+					if (maxlabel > kv.first) {
 						maxweight = kv.second;
 						maxlabel = kv.first;
 					}

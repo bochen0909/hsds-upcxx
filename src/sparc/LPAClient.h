@@ -9,6 +9,8 @@
 #define SUBPROJECTS__SPARC_MPI_SRC_SPARC_LPACLIENT_H_
 
 #include <vector>
+#include <set>
+#include <map>
 #include "LPAState.h"
 #include "ZMQClient.h"
 
@@ -31,6 +33,10 @@ public:
 	void run_iteration(int i);
 
 protected:
+	void do_query_and_update_nodes(const std::vector<uint32_t> &nodes,
+			const std::map<uint32_t, std::set<uint32_t>> &request);
+
+
 	void query_and_update_nodes();
 	void notify_changed_nodes();
 

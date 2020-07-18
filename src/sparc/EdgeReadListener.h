@@ -19,10 +19,14 @@ public:
 	virtual ~EdgeReadListener();
 	int start();
 	NodeCollection* getEdges();
+
+	bool need_compress_message();
 protected:
 	static void* listener_thread_run(void *vargp);
 
 	NodeCollection *edges;
+
+	bool b_compress_message = false;
 
 };
 

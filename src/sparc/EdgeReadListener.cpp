@@ -28,9 +28,29 @@ EdgeReadListener::EdgeReadListener(const std::string &hostname, int port,
 		KmerCountingListener(hostname, port, dbpath, dbtype, false), edges(
 				edges) {
 
+	std::string v = sparc::get_env("SPARC_COMPRESS_MESSAGE");
+	sparc::trim(v);
+	if (!v.empty()) {
+		std::transform(v.begin(), v.end(), v.begin(), [](unsigned char c) {
+			return std::tolower(c);
+		});
+
+		if (v == "yes" || v == "true" || v == "on" || v == "1") {
+			b_compress_message = true;
+		}
+	}
+
+	if (b_compress_message) {
+		myinfo("Listener uses lz4 to compress network message.");
+	}
+
 }
 
 EdgeReadListener::~EdgeReadListener() {
+}
+
+bool EdgeReadListener::need_compress_message() {
+	return b_compress_message;
 }
 
 NodeCollection* EdgeReadListener::getEdges() {
@@ -83,17 +103,26 @@ inline void EdgeReadListener_on_notifed_changed(zmqpp::message &message,
 inline void EdgeReadListener_query_node(zmqpp::message &message,
 		EdgeReadListener &self, zmqpp::socket &socket) {
 	NodeCollection &edges = *self.getEdges();
-	if (true) {
+	Message msg;
+	Message msgout(self.need_compress_message());
+	message >> msg;
+	size_t N;
+	msg >> N;
+	msgout << N;
+	for (size_t i = 0; i < N; i++) {
+
 		uint32_t a;
-		message >> a;
+		msg >> a;
 #ifdef DEBUG
 		assert (edges.find(a)!=edges.end());
 #endif
 		self.inc_recv();
-		zmqpp::message message2;
-		message2 << edges.at(a).label;
-		socket.send(message2);
+
+		msgout << edges.at(a).label;
 	}
+	zmqpp::message message2;
+	message2 << msgout;
+	socket.send(message2);
 }
 
 void* EdgeReadListener::listener_thread_run(void *vargp) {

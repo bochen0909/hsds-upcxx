@@ -6,6 +6,7 @@
  */
 
 #include <sstream>
+#include <set>
 #include "gzstream.h"
 #include "log.h"
 #include "utils.h"
@@ -31,34 +32,88 @@ LPAClient::LPAClient(const std::vector<int> &peers_ports,
 NodeCollection* LPAClient::getNode() {
 	return state.getNodes();
 }
+void LPAClient::do_query_and_update_nodes(const std::vector<uint32_t> &nodes,
+		const std::map<uint32_t, std::set<uint32_t>> &request) {
 
-void LPAClient::query_and_update_nodes() {
-	size_t npeers = peers.size();
+	//request labels
+	std::map<uint32_t, uint32_t> labels;
+	for (auto &kv : request) {
+		uint32_t rank = kv.first;
+		std::vector<uint32_t> values(kv.second.begin(), kv.second.end());
+		zmqpp::socket *socket = peers[rank];
+		Message msg(b_compress_message);
+		msg << values.size();
+		for (size_t i = 0; i < values.size(); i++) {
+			msg << values.at(i);
+		}
 
+		zmqpp::message message;
+		message << LPAV1_QUERY_LABELS << msg;
+		socket->send(message);
+
+		zmqpp::message message2;
+		socket->receive(message2);
+		Message msg2;
+		message2 >> msg2;
+		size_t N;
+		msg2 >> N;
+		assert(N == values.size());
+		for (size_t i = 0; i < values.size(); i++) {
+			uint32_t label;
+			msg2 >> label;
+			labels[values.at(i)] = label;
+		}
+	}
+
+	//update local
 	auto &edges = state.get_edges();
-	for (NodeCollection::iterator itor = edges.begin(); itor != edges.end();
-			itor++) {
-
-		uint32_t this_node = itor->first;
+	for (uint32_t this_node : nodes) {
+		auto &nc = edges.at(this_node);
 		std::vector<uint32_t> this_labels;
 		std::vector<float> this_weights;
-		for (auto &eg : itor->second.neighbors) {
+		for (auto &eg : nc.neighbors) {
 			uint32_t node = eg.node;
-			uint32_t rank = fnv_hash(node) % npeers;
-			zmqpp::socket *socket = peers[rank];
-
-			zmqpp::message message;
-			message << LPAV1_QUERY_LABELS << node;
-			socket->send(message);
-
-			zmqpp::message message2;
-			socket->receive(message2);
-			uint32_t label;
-			message2 >> label;
+#ifdef DEBUG
+			assert(labels.find(node)!=labels.end());
+#endif
+			uint32_t label = labels.at(node);
 			this_labels.push_back(label);
 			this_weights.push_back(eg.weight);
 		}
 		state.update(this_node, this_labels, this_weights);
+	}
+}
+void LPAClient::query_and_update_nodes() {
+
+	size_t npeers = peers.size();
+
+	auto &edges = state.get_edges();
+
+	size_t NODE_BATCH = edges.size() / 3;
+	NODE_BATCH = (NODE_BATCH > 10000 ? 10000 : NODE_BATCH);
+
+	std::map<uint32_t, std::set<uint32_t>> request; //rank -> nodes
+	std::vector<uint32_t> nodes; //processing nodes
+	for (NodeCollection::iterator itor = edges.begin(); itor != edges.end();
+			itor++) {
+		uint32_t this_node = itor->first;
+		nodes.push_back(this_node);
+		for (auto &eg : itor->second.neighbors) {
+			uint32_t node = eg.node;
+			uint32_t rank = fnv_hash(node) % npeers;
+			request[rank].insert(node);
+		}
+		if (nodes.size() >= NODE_BATCH) {
+			do_query_and_update_nodes(nodes, request);
+			nodes.clear();
+			request.clear();
+		}
+	}
+
+	if (!nodes.empty()) {
+		do_query_and_update_nodes(nodes, request);
+		nodes.clear();
+		request.clear();
 	}
 }
 

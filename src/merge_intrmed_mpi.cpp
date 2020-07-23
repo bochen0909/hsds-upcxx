@@ -15,6 +15,7 @@
 #include <string>
 #include <iostream>
 #include <unistd.h>
+#include <chrono>
 #include <mpi.h>
 
 #include "argagg.hpp"
@@ -90,6 +91,7 @@ struct Config {
 
 	int get_my_port(int h) {
 		return port + h * nprocs + rank;
+		//return port +  rank;
 	}
 
 };
@@ -114,6 +116,7 @@ void check_arg(argagg::parser_results &args, char *name) {
 int run(int bucket, const std::vector<std::string> &input, Config &config);
 int run_bucket(int bucket, const std::vector<std::string> &input,
 		Config &config);
+void reshuffle_rank(Config &config);
 
 int main(int argc, char **argv) {
 	int rank, size;
@@ -262,11 +265,10 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	std::vector<std::vector<std::string>> myinputs = get_my_files(
-			config.inputpath, rank, size, config.num_bucket);
-	assert(myinputs.size() == config.num_bucket);
+	std::vector<std::string> myinput = get_my_files(config.inputpath, rank,
+			size);
+	reshuffle_rank(config);
 	for (int b = 0; b < config.num_bucket; b++) {
-		std::vector<std::string> myinput = myinputs.at(b);
 		run_bucket(b, myinput, config);
 
 	}
@@ -277,7 +279,8 @@ int main(int argc, char **argv) {
 
 void get_peers_information(int bucket, Config &config) {
 	int rank = config.rank;
-
+	config.peers_ports.clear();
+	config.peers_hosts.clear();
 	for (int p = 0; p < config.nprocs; p++) { //p:  a peer
 		int buf;
 		if (rank == p) {
@@ -305,7 +308,7 @@ void get_peers_information(int bucket, Config &config) {
 }
 
 void reshuffle_rank(Config &config) {
-
+	config.hash_rank_mapping.clear();
 	int nproc = config.nprocs;
 	int buf[nproc];
 	if (config.rank == 0) {
@@ -333,23 +336,17 @@ int run_bucket(int bucket, const std::vector<std::string> &input,
 	if (config.rank == 0) {
 		myinfo("Start running bucket %d", bucket);
 	}
+	myinfo("bucket %d: #of my inputs = %ld", bucket, input.size());
+	MPI_Barrier(MPI_COMM_WORLD);
+	return run(bucket, input, config);
+	MPI_Barrier(MPI_COMM_WORLD);
 
-	std::vector<std::string> myinput;
-	for (size_t i = 0; i < input.size(); i++) {
-		std::string filename = input.at(i);
-		if ((int) (fnv_hash(filename) % config.nprocs) == config.rank) {
-			myinput.push_back(input.at(i));
-		}
-	}
-	myinfo("bucket %d: #of my inputs = %ld", bucket, myinput.size());
-	return run(bucket, myinput, config);
 }
 
 int run(int bucket, const std::vector<std::string> &input, Config &config) {
 	if (config.rank == 0) {
 		config.print();
 	}
-	reshuffle_rank(config);
 	get_peers_information(bucket, config);
 	MergeListener listener(config.mpi_ipaddress, config.get_my_port(bucket),
 			config.get_dbpath(bucket), config.dbtype,
@@ -363,6 +360,7 @@ int run(int bucket, const std::vector<std::string> &input, Config &config) {
 		MPI_Abort( MPI_COMM_WORLD, -1);
 	}
 
+	std::this_thread::sleep_for(std::chrono::seconds(2));
 	//wait for all server is ready
 	MPI_Barrier(MPI_COMM_WORLD);
 	if (config.rank == 0) {
@@ -377,7 +375,8 @@ int run(int bucket, const std::vector<std::string> &input, Config &config) {
 
 	for (size_t i = 0; i < input.size(); i++) {
 		myinfo("processing %s", input.at(i).c_str());
-		client.process_input_file(input.at(i), config.sep, config.sep_pos);
+		client.process_input_file(bucket, config.nprocs, input.at(i),
+				config.sep, config.sep_pos);
 	}
 
 	MPI_Barrier(MPI_COMM_WORLD);

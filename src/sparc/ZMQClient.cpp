@@ -78,7 +78,9 @@ int ZMQClient::start() {
 		zmqpp::socket *socket = new zmqpp::socket(*context, type);
 
 		// bind to the socket
-		mydebug("connecting to %s", endpoint.c_str());
+#ifdef DEBUG
+		myinfo("connecting to %s", endpoint.c_str());
+#endif
 		socket->connect(endpoint);
 		peers.push_back(socket);
 	}

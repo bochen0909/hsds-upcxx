@@ -16,7 +16,8 @@ public:
 			const std::vector<int> &hash_rank_mapping);
 	virtual ~MergeClient();
 
-	int process_input_file(const std::string &filepath, char sep, int sep_pos);
+	int process_input_file(int bucket, int nprocs, const std::string &filepath,
+			char sep, int sep_pos);
 };
 
 #endif /* SUBPROJECTS__SPARC_MPI_SRC_SPARC_MERGECLIENT_H_ */

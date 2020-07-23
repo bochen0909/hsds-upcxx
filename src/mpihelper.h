@@ -191,13 +191,15 @@ std::vector<std::vector<std::string>> get_my_files(
 
 vector<std::vector<std::string>> get_my_files(const std::string &folder,
 		int rank, int size, int n_bucket) {
-	return get_my_files( { folder }, rank, size, n_bucket);
+	std::vector<string> v = { folder };
+	return get_my_files(v, rank, size, n_bucket);
 
 }
 
 std::vector<std::string> get_my_files(const std::string &folder, int rank,
 		int size) {
-	return get_my_files( { folder }, rank, size, 1).at(0);
+	std::vector<string> v = { folder };
+	return get_my_files(v, rank, size, 1).at(0);
 
 }
 

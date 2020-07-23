@@ -258,6 +258,12 @@ if(BUILD_SPARC_MIMIR)
 	add_executable(test_lz4string src/test_lz4string.cpp src/sparc/LZ4String.cpp src/sparc/Message.cpp)
 	target_include_directories(test_lz4string PUBLIC "${LOCAL_EXT_PREFIX_DIR}/include" )
 	target_link_libraries(test_lz4string PUBLIC lz4 zmqpp zmq Threads::Threads)
+
+	add_executable(test_check_input_files src/test_check_input_files.cpp src/sparc/utils.cpp src/kmer.cpp src/sparc/log.cpp)
+	target_include_directories(test_check_input_files PUBLIC "${MPI_CXX_INCLUDE_DIRS}" )
+	target_include_directories(test_check_input_files PUBLIC "${LOCAL_EXT_PREFIX_DIR}/include" )
+	target_link_libraries(test_check_input_files PUBLIC spdlog ${MPI_CXX_LIBRARIES})
+
 	
 	add_executable(kmer_counting_mpi 
 		src/kmer_counting_mpi.cpp 

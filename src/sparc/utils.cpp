@@ -103,6 +103,15 @@ int make_dir(const char *path) {
 	return status;
 }
 
+bool is_dir(const char *path) {
+	struct stat s;
+	if (stat(path, &s) == 0) {
+		if (s.st_mode & S_IFDIR) {
+			return true;
+		}
+	}
+	return false;
+}
 std::vector<std::string> list_dir(const char *path) {
 	std::vector<std::string> ret;
 	std::string strpath = path;
@@ -113,7 +122,10 @@ std::vector<std::string> list_dir(const char *path) {
 		while ((ent = readdir(dir)) != NULL) {
 			std::string dirname = ent->d_name;
 			if (dirname != "." && dirname != "..") {
-				ret.push_back(strpath + "/" + dirname);
+				std::string s = strpath + "/" + dirname;
+				if (!is_dir(s.c_str())) {
+					ret.push_back(s);
+				}
 			}
 		}
 		closedir(dir);

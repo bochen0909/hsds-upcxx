@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <string>
 #include <algorithm>
+#include <cmath>
 
 #include "acutest.h"
 #include "sparc/LZ4String.h"
@@ -15,7 +16,7 @@ using namespace std;
 		TEST_MSG("Produced: %d", (b));
 
 #define TEST_DOUBLE_EQUAL(a,b) \
-		TEST_CHECK( std::abs((a) - (b))<1e-10); \
+		TEST_CHECK( std::abs((double)(a) - (b))<1e-10); \
 		TEST_MSG("Expected: %f", (double)(a)); \
 		TEST_MSG("Produced: %f", (double)(b));
 

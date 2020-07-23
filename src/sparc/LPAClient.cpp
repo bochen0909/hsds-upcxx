@@ -18,7 +18,7 @@
 using namespace std;
 extern uint32_t fnv_hash(uint32_t);
 
-#define KMER_SEND_BATCH_SIZE (100*1000)
+#define KMER_SEND_BATCH_SIZE (1000*1000)
 
 LPAClient::LPAClient(const std::vector<int> &peers_ports,
 		const std::vector<std::string> &peers_hosts,

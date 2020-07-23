@@ -82,5 +82,8 @@ int main(int argc, char **argv) {
 		myinfo("rank %d, size %d, #folder %ld, #bucket %d, #input: %ld", rank,
 				size, inputpath.size(), i, myinput.at(i).size());
 	}
+
+	MPI_Finalize();
+
 }
 

@@ -60,7 +60,7 @@ ExternalProject_Add(gzstreamlib
   BUILD_IN_SOURCE 1
   CONFIGURE_COMMAND  "" 
   BUILD_COMMAND  make 
-  INSTALL_COMMAND  cp gzstream.h <INSTALL_DIR>/include && cp libgzstream.a <INSTALL_DIR>/lib
+  INSTALL_COMMAND  mkdir -p <INSTALL_DIR>/include && mkdir -p <INSTALL_DIR>/lib && cp gzstream.h <INSTALL_DIR>/include && cp libgzstream.a <INSTALL_DIR>/lib
   )
 set_target_properties(gzstreamlib PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
@@ -326,7 +326,7 @@ if(BUILD_SPARC_MIMIR)
 			target_link_libraries(${EXEC} PUBLIC leveldb snappy)
 			set_target_properties(${EXEC} PROPERTIES COMPILE_FLAGS "-DBUILD_WITH_LEVELDB")
 		endif()
-		add_dependencies(${EXEC} zmqpplib spdloglib gzstreamlib)
+		add_dependencies(${EXEC} lz4lib zmqpplib spdloglib gzstreamlib)
 		target_include_directories(${EXEC} PUBLIC "${LOCAL_EXT_PREFIX_DIR}/include" )
 		target_include_directories(${EXEC} PUBLIC "${MPI_CXX_INCLUDE_DIRS}" )
 		target_link_libraries(${EXEC} PUBLIC zmqpp zmq lz4 spdlog gzstream ZLIB::ZLIB Threads::Threads dl)

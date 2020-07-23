@@ -25,6 +25,7 @@
 #include "sparc/MergeListener.h"
 #include "sparc/MergeClient.h"
 #include "sparc/DBHelper.h"
+#include "mpihelper.h"
 using namespace std;
 using namespace sparc;
 
@@ -140,19 +141,21 @@ int main(int argc, char **argv) {
 
 			{ "port", { "-p", "--port" }, "port number", 1 },
 
-			{ "scratch_dir", {  "--scratch" },
+			{ "scratch_dir", { "--scratch" },
 					"scratch dir where to put temp data", 1 },
 
 			{ "sep", { "--sep" }, "separate char between key and val", 1 },
 
-			{ "sep_pos", { "--sp" }, "which separator are used to split key value. default 1 (first one)", 1 },
+					{ "sep_pos", { "--sp" },
+							"which separator are used to split key value. default 1 (first one)",
+							1 },
 
-			{ "dbtype", { "--db" }, "dbtype (leveldb,rocksdb or default memdb)",
-					1 },
+					{ "dbtype", { "--db" },
+							"dbtype (leveldb,rocksdb or default memdb)", 1 },
 
-			{ "zip_output", { "-z", "--zip" }, "zip output files", 0 },
+					{ "zip_output", { "-z", "--zip" }, "zip output files", 0 },
 
-			{ "output", { "-o", "--output" }, "output folder", 1 },
+					{ "output", { "-o", "--output" }, "output folder", 1 },
 
 					{ "num_bucket", { "-n", "--num-bucket" },
 							"process input as n bucket (save memory, trade space with time)",
@@ -192,7 +195,7 @@ int main(int argc, char **argv) {
 		config.sep = '\t';
 	}
 
-	config.sep_pos= args["sep_pos"].as<int>(1);
+	config.sep_pos = args["sep_pos"].as<int>(1);
 	config.append_merge = args["append_merge"];
 	config.zip_output = args["zip_output"];
 
@@ -259,33 +262,11 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	std::vector<std::string> input;
-	for (size_t i = 0; i < config.inputpath.size(); i++) {
-		std::vector<std::string> v = list_dir(config.inputpath.at(i).c_str());
-		input.insert(input.end(), v.begin(), v.end());
-	}
-	sort(input.begin(), input.end());
-	input.erase(unique(input.begin(), input.end()), input.end());
-	shuffle(input);
-
-	if (input.size() == 0) {
-		cerr << "Error, no input found " << endl;
-		return EXIT_FAILURE;
-	} else {
-		if (rank == 0) {
-			myinfo("#of inputs = %ld", input.size());
-		}
-	}
-
+	std::vector<std::vector<std::string>> myinputs = get_my_files(
+			config.inputpath, rank, size, config.num_bucket);
+	assert(myinputs.size() == config.num_bucket);
 	for (int b = 0; b < config.num_bucket; b++) {
-		std::vector<std::string> myinput;
-		for (size_t i = 0; i < input.size(); i++) {
-			std::string filename = input.at(i);
-			if ((int) (fnv_hash(filename) % size) == b) {
-				myinput.push_back(filename);
-			}
-		}
-
+		std::vector<std::string> myinput = myinputs.at(b);
 		run_bucket(b, myinput, config);
 
 	}

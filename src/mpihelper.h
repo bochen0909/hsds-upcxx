@@ -146,7 +146,7 @@ bool get_all_files_check(const std::vector<std::string> &folders,
 
 std::vector<std::vector<std::string>> get_my_files(
 		const std::vector<std::string> &folders, int rank, int size,
-		int n_bucket = 1) {
+		int n_bucket) {
 	std::vector<std::vector<std::string>> myinput;
 	std::vector<std::string> allfiles;
 	if (get_all_files_check(folders, allfiles, rank, size)) {

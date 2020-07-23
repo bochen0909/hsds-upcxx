@@ -26,6 +26,7 @@
 #include "sparc/LPAState.h"
 #include "sparc/EdgeReadListener.h"
 #include "sparc/LPAClient.h"
+#include "mpihelper.h"
 using namespace std;
 using namespace sparc;
 
@@ -226,31 +227,8 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	std::vector<std::string> input;
-	for (size_t i = 0; i < config.inputpath.size(); i++) {
-		std::vector<std::string> v = list_dir(config.inputpath.at(i).c_str());
-		input.insert(input.end(), v.begin(), v.end());
-	}
-	sort(input.begin(), input.end());
-	input.erase(unique(input.begin(), input.end()), input.end());
-	shuffle(input);
+	std::vector<std::string> myinput = get_my_files(config.inputpath, rank, size);
 
-	if (input.size() == 0) {
-		cerr << "Error, no input found " << endl;
-		return EXIT_FAILURE;
-	} else {
-		if (rank == 0) {
-			myinfo("#of inputs = %ld", input.size());
-		}
-	}
-
-	std::vector<std::string> myinput;
-	for (size_t i = 0; i < input.size(); i++) {
-		std::string filename = input.at(i);
-		if ((int) (fnv_hash(filename) % size) == rank) {
-			myinput.push_back(filename);
-		}
-	}
 	run(myinput, config);
 
 	MPI_Finalize();

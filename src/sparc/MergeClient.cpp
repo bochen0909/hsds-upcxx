@@ -28,7 +28,7 @@ MergeClient::~MergeClient() {
 
 }
 
-inline void merge_client_map_line(int bucket, int nprocs,
+inline void merge_client_map_line(int bucket, int n_bucket,
 		const std::string &line, char sep, int sep_pos,
 		std::vector<string> &keys, std::vector<string> &values) {
 	size_t pos = 0;
@@ -49,14 +49,14 @@ inline void merge_client_map_line(int bucket, int nprocs,
 	}
 
 	std::string key = line.substr(0, pos);
-	if (fnv_hash(key) % nprocs == bucket) {
+	if (fnv_hash(key) % n_bucket == bucket) {
 		std::string val = line.substr(pos + 1);
 		keys.push_back(key);
 		values.push_back(val);
 	}
 }
 
-int MergeClient::process_input_file(int bucket, int nprocs,
+int MergeClient::process_input_file(int bucket, int n_bucket,
 		const std::string &filepath, char sep, int sep_pos) {
 	std::vector<string> keys;
 	std::vector<string> values;
@@ -64,7 +64,7 @@ int MergeClient::process_input_file(int bucket, int nprocs,
 		igzstream file(filepath.c_str());
 		std::string line;
 		while (std::getline(file, line)) {
-			merge_client_map_line(bucket, nprocs, line, sep, sep_pos, keys,
+			merge_client_map_line(bucket, n_bucket, line, sep, sep_pos, keys,
 					values);
 			if (keys.size() >= KMER_SEND_BATCH_SIZE) {
 				send_kmers(keys, values);
@@ -76,7 +76,7 @@ int MergeClient::process_input_file(int bucket, int nprocs,
 		std::ifstream file(filepath);
 		std::string line;
 		while (std::getline(file, line)) {
-			merge_client_map_line(bucket, nprocs, line, sep, sep_pos, keys,
+			merge_client_map_line(bucket, n_bucket, line, sep, sep_pos, keys,
 					values);
 			if (keys.size() >= KMER_SEND_BATCH_SIZE) {
 				send_kmers(keys, values);

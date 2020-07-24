@@ -16,7 +16,7 @@ public:
 			const std::vector<int> &hash_rank_mapping);
 	virtual ~MergeClient();
 
-	int process_input_file(int bucket, int nprocs, const std::string &filepath,
+	int process_input_file(int bucket, int n_bucket, const std::string &filepath,
 			char sep, int sep_pos);
 };
 

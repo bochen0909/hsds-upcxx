@@ -39,7 +39,7 @@ template<typename K, typename V> class MemDBHelper: public DBHelper {
 public:
 	MemDBHelper() :
 			DBHelper(false) {
-		store.reserve(10 * 1024 * 1024);
+		store.reserve(1 * 1024 * 1024);
 	}
 	int create() {
 		return 0;

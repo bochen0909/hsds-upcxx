@@ -375,7 +375,7 @@ int run(int bucket, const std::vector<std::string> &input, Config &config) {
 
 	for (size_t i = 0; i < input.size(); i++) {
 		myinfo("processing %s", input.at(i).c_str());
-		client.process_input_file(bucket, config.nprocs, input.at(i),
+		client.process_input_file(bucket, config.num_bucket, input.at(i),
 				config.sep, config.sep_pos);
 	}
 

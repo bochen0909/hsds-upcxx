@@ -13,19 +13,33 @@
 #include <string>
 #include <fstream>
 #include <gzstream.h>
+#ifdef USE_TSL_ROBIN_MAP
+#include <tsl/robin_map.h>
+#else
 #include "robin_hood.h"
+#endif
 #include "utils.h"
 #include "log.h"
 #include "LZ4String.h"
 #include "DBHelper.h"
+
+
+#ifdef USE_TSL_ROBIN_MAP
 template<typename K, typename V>
-using MapIterator = typename robin_hood::unordered_map<K,V>::const_iterator;
+using unordered_map = tsl::robin_map<K,V>;
+#else
+template<typename K, typename V>
+using unordered_map = robin_hood::unordered_map<K,V>;
+#endif
+
+template<typename K, typename V>
+using MapIterator = typename unordered_map<K,V>::const_iterator;
 
 template<typename K, typename V> class MemDBHelper: public DBHelper {
 public:
 	MemDBHelper() :
 			DBHelper(false) {
-		store.reserve(2 * 1024 * 1024);
+		store.reserve(10 * 1024 * 1024);
 	}
 	int create() {
 		return 0;
@@ -89,7 +103,7 @@ public:
 	}
 
 private:
-	robin_hood::unordered_map<K, V> store;
+	unordered_map<K, V> store;
 
 };
 

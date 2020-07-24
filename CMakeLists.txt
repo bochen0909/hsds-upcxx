@@ -77,6 +77,18 @@ ExternalProject_Add(spdloglib
   )
 set_target_properties(spdloglib PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
+ExternalProject_Add(tsl_robin_map_lib
+  PREFIX ${PROJECT_SOURCE_DIR}/extlib
+  GIT_REPOSITORY https://github.com/Tessil/robin-map.git
+  GIT_TAG v0.6.3
+  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
+  BUILD_IN_SOURCE 1
+  CONFIGURE_COMMAND  "" 
+  BUILD_COMMAND  mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>  ..  
+  INSTALL_COMMAND  cd build && make install 
+  )
+set_target_properties(tsl_robin_map_lib PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
 ExternalProject_Add(libzmq
   PREFIX ${PROJECT_SOURCE_DIR}/extlib
   GIT_REPOSITORY https://github.com/zeromq/libzmq.git
@@ -340,6 +352,11 @@ if(BUILD_SPARC_MIMIR)
 	    set_target_properties(${EXEC} PROPERTIES EXCLUDE_FROM_ALL TRUE)
 	    add_dependencies(sparc_mpi ${EXEC})
 	endforeach(EXEC)
+	
+	#some specials
+	set_target_properties(merge_intrmed_mpi PROPERTIES COMPILE_FLAGS "-DUSE_TSL_ROBIN_MAP")
+	add_dependencies(merge_intrmed_mpi tsl_robin_map_lib)
+	
 endif()
 
 

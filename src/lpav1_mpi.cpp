@@ -228,7 +228,7 @@ int main(int argc, char **argv) {
 	}
 
 	std::vector<std::string> myinput = get_my_files(config.inputpath, rank, size);
-
+	myinfo("#of my input: %ld", myinput.size());
 	run(myinput, config);
 
 	MPI_Finalize();

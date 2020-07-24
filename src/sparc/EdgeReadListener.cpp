@@ -64,12 +64,16 @@ inline void EdgeReadListener_initial_graph(zmqpp::message &message,
 	if (true) {
 		Message msg;
 		message >> msg;
-		uint32_t a;
-		uint32_t b;
-		float w;
-		msg >> a >> b >> w;
-		edges[a].neighbors.push_back( { b, w });
-		self.inc_recv();
+		size_t N;
+		msg >> N;
+		for (size_t i = 0; i < N; i++) {
+			uint32_t a;
+			uint32_t b;
+			float w;
+			msg >> a >> b >> w;
+			edges[a].neighbors.push_back( { b, w });
+			self.inc_recv();
+		}
 	}
 	zmqpp::message message2;
 	message2 << "OK";

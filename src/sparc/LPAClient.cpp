@@ -161,20 +161,35 @@ void LPAClient::notify_changed_nodes() {
 void LPAClient::send_edge(std::vector<uint32_t> &from,
 		std::vector<uint32_t> &to, std::vector<float> &weight) {
 	size_t npeers = peers.size();
-
+	std::map<uint32_t, std::vector<std::tuple<uint32_t, uint32_t, float>>> request;
 	for (size_t i = 0; i < from.size(); i++) {
 		uint32_t a = from.at(i);
 		uint32_t b = to.at(i);
 		float w = weight.at(i);
 		uint32_t rank = fnv_hash(a) % npeers;
+		request[rank].push_back(std::make_tuple(a, b, w));
+	}
+
+	for (auto &kv : request) {
+		uint32_t rank = kv.first;
+		const auto &v = kv.second;
 		zmqpp::socket *socket = peers[rank];
 
 		Message mymsg(b_compress_message);
-		mymsg << a << b << w;
+		mymsg << v.size();
+		for (const auto &t : v) {
+			uint32_t a;
+			uint32_t b;
+			float w;
+			std::tie(a, b, w) = t;
+			mymsg << a << b << w;
+			n_send++;
+		}
+
 		zmqpp::message message;
 		message << LPAV1_INIT_GRAPH << mymsg;
 		socket->send(message);
-		n_send++;
+
 		zmqpp::message message2;
 		socket->receive(message2);
 		std::string reply;
@@ -182,7 +197,9 @@ void LPAClient::send_edge(std::vector<uint32_t> &from,
 		if (reply != "OK") {
 			myerror("get reply failed");
 		}
+
 	}
+
 }
 
 void LPAClient::run_iteration(int i) {

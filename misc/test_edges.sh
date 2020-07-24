@@ -106,6 +106,8 @@ for MPICMD in "" "mpirun -n 4"; do
 	test_generate_edges edge_generating_mrmpi edge_generating_mimir "$PARAM" "$PARAM" 
 	
 	test_generate_edges edge_generating_mpi edge_generating_mimir  "$PARAM" "$PARAM"
+
+	test_generate_edges edge_generating_mpi edge_generating_mpi "$PARAM -n 3"  "$PARAM" 
 	
 	CAT1=zcat test_generate_edges edge_generating_mpi edge_generating_mpi "$PARAMZ" "$PARAM" 
 	

@@ -19,7 +19,8 @@ using namespace std;
 using namespace sparc;
 
 EdgeCountingClient::EdgeCountingClient(const std::vector<int> &peers_ports,
-		const std::vector<std::string> &peers_hosts,const std::vector<int> &hash_rank_mapping) :
+		const std::vector<std::string> &peers_hosts,
+		const std::vector<int> &hash_rank_mapping) :
 		KmerCountingClient(peers_ports, peers_hosts, hash_rank_mapping, false) {
 
 }
@@ -28,8 +29,8 @@ EdgeCountingClient::~EdgeCountingClient() {
 
 }
 
-void EdgeCountingClient::map_line(const std::string &line,
-		size_t min_shared_kmers, size_t max_degree,
+void EdgeCountingClient::map_line(int iteration, int n_interation,
+		const std::string &line, size_t min_shared_kmers, size_t max_degree,
 		std::vector<std::string> &edges_output) {
 	std::vector<std::string> arr = split(line, "\t");
 	if (arr.empty()) {
@@ -58,27 +59,30 @@ void EdgeCountingClient::map_line(const std::string &line,
 	for (int i = 0; i < edges.size(); i++) {
 		uint32_t a = edges.at(i).first;
 		uint32_t b = edges.at(i).second;
-		std::stringstream ss;
-		if (a <= b) {
-			ss << a << " " << b;
-		} else {
-			ss << b << " " << a;
+		if ((a + b) % n_interation == iteration) {
+			std::stringstream ss;
+			if (a <= b) {
+				ss << a << " " << b;
+			} else {
+				ss << b << " " << a;
+			}
+			string s = ss.str();
+			edges_output.push_back(s);
 		}
-		string s =ss.str();
-		edges_output.push_back(s);
 	}
-
 }
 
-int EdgeCountingClient::process_krm_file(const std::string &filepath,
-		size_t min_shared_kmers, size_t max_degree) {
+int EdgeCountingClient::process_krm_file(int iteration, int n_interation,
+		const std::string &filepath, size_t min_shared_kmers,
+		size_t max_degree) {
 	std::vector<string> kmers;
 	std::vector<uint32_t> nodeids;
 	if (endswith(filepath, ".gz")) {
 		igzstream file(filepath.c_str());
 		std::string line;
 		while (std::getline(file, line)) {
-			map_line(line, min_shared_kmers, max_degree, kmers);
+			map_line(iteration, n_interation, line, min_shared_kmers,
+					max_degree, kmers);
 			if (kmers.size() >= KMER_SEND_BATCH_SIZE) {
 				send_kmers(kmers, nodeids);
 				kmers.clear();
@@ -89,7 +93,8 @@ int EdgeCountingClient::process_krm_file(const std::string &filepath,
 		std::ifstream file(filepath);
 		std::string line;
 		while (std::getline(file, line)) {
-			map_line(line, min_shared_kmers, max_degree, kmers);
+			map_line(iteration, n_interation, line, min_shared_kmers,
+					max_degree, kmers);
 			if (kmers.size() >= KMER_SEND_BATCH_SIZE) {
 				send_kmers(kmers, nodeids);
 				kmers.clear();

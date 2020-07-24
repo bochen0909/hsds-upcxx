@@ -30,7 +30,7 @@ using namespace std;
 using namespace sparc;
 
 struct Config {
-	string inputpath;
+	vector<string> inputpath;
 	string outputpath;
 	string scratch_dir;
 	string mpi_hostname;
@@ -40,6 +40,7 @@ struct Config {
 	int port;
 	int rank;
 	int nprocs;
+	int n_iteration;
 	DBHelper::DBTYPE dbtype;
 	bool zip_output;
 	std::vector<int> peers_ports;
@@ -47,10 +48,13 @@ struct Config {
 	std::vector<int> hash_rank_mapping;
 
 	void print() {
+		myinfo("config: n_iteration=%ld", n_iteration);
 		myinfo("config: max_degree=%ld", max_degree);
 		myinfo("config: min_shared_kmers=%ld", min_shared_kmers);
 		myinfo("config: zip_output=%d", zip_output ? 1 : 0);
-		myinfo("config: inputpath=%s", inputpath.c_str());
+		for (size_t i = 0; i < inputpath.size(); i++) {
+			myinfo("config: inputpath[%d]=%s", i, inputpath.at(i).c_str());
+		}
 		myinfo("config: outputpath=%s", outputpath.c_str());
 		myinfo("config: scratch_dir=%s", scratch_dir.c_str());
 		myinfo("config: dbpath=%s", get_dbpath().c_str());
@@ -67,18 +71,18 @@ struct Config {
 		return tmp;
 	}
 
-	std::string get_my_output() {
+	std::string get_my_output(int h) {
 		char tmp[2048];
 		if (zip_output) {
-			sprintf(tmp, "%s/kc_%d.txt.gz", outputpath.c_str(), rank);
+			sprintf(tmp, "%s/part_h%d_r%d.txt.gz", outputpath.c_str(), h, rank);
 		} else {
-			sprintf(tmp, "%s/kc_%d.txt", outputpath.c_str(), rank);
+			sprintf(tmp, "%s/part_h%d_r%d.txt", outputpath.c_str(), h, rank);
 		}
 		return tmp;
 	}
 
-	int get_my_port() {
-		return port + rank;
+	int get_my_port(int i) {
+		return port + i * nprocs + rank;
 	}
 
 };
@@ -131,6 +135,8 @@ int main(int argc, char **argv) {
 
 			{ "port", { "-p", "--port" }, "port number", 1 },
 
+			{ "n_iteration", { "-n" }, "number of iteration", 1 },
+
 			{ "scratch_dir", { "-s", "--scratch" },
 					"scratch dir where to put temp data", 1 },
 
@@ -164,12 +170,8 @@ int main(int argc, char **argv) {
 		return EXIT_SUCCESS;
 	}
 
-	if (!args.pos.empty()) {
-		std::cerr << "no positional argument is allowed" << endl;
-		return EXIT_SUCCESS;
-	}
-
 	config.max_degree = args["max_degree"].as<int>(100);
+	config.n_iteration = args["n_iteration"].as<int>(1);
 
 	if (args["min_shared_kmers"]) {
 		config.min_shared_kmers = args["min_shared_kmers"].as<int>();
@@ -219,17 +221,36 @@ int main(int argc, char **argv) {
 		config.port = 7979;
 	}
 
-	check_arg(args, (char*) "input");
-	string inputpath = args["input"].as<string>();
-	config.inputpath = inputpath;
+	if (!args.pos.empty()) {
+		config.inputpath = args.all_as<string>();
+	}
+
+	if (args["input"]) {
+		string a = args["input"].as<string>();
+		config.inputpath.push_back(a);
+	}
+
+	if (!config.inputpath.empty()) {
+		bool b_error = false;
+		for (size_t i = 0; i < config.inputpath.size(); i++) {
+			if (!dir_exists(config.inputpath.at(i).c_str())) {
+				cerr << "Error, input dir does not exists:  "
+						<< config.inputpath.at(i) << endl;
+				b_error = true;
+			}
+		}
+		if (b_error) {
+			return EXIT_FAILURE;
+		}
+
+	} else {
+		cerr << "Error, no inputs specified. " << endl;
+		return EXIT_FAILURE;
+	}
+
 	check_arg(args, (char*) "output");
 	string outputpath = args["output"].as<string>();
 	config.outputpath = outputpath;
-
-	if (!dir_exists(inputpath.c_str())) {
-		cerr << "Error, input dir does not exists:  " << inputpath << endl;
-		return EXIT_FAILURE;
-	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
 	if (rank == 0) {
@@ -246,7 +267,8 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	std::vector<std::string> myinput = get_my_files(inputpath, rank, size);
+	std::vector<std::string> myinput = get_my_files(config.inputpath, rank,
+			size);
 	myinfo("#of my inputs = %ld", myinput.size());
 	run(myinput, config);
 	MPI_Finalize();
@@ -254,13 +276,14 @@ int main(int argc, char **argv) {
 	return 0;
 }
 
-void get_peers_information(Config &config) {
+void get_peers_information(int bucket, Config &config) {
 	int rank = config.rank;
-
+	config.peers_ports.clear();
+	config.peers_hosts.clear();
 	for (int p = 0; p < config.nprocs; p++) { //p:  a peer
 		int buf;
 		if (rank == p) {
-			buf = config.get_my_port();
+			buf = config.get_my_port(bucket);
 		}
 
 		/* everyone calls bcast, data is taken from root and ends up in everyone's buf */
@@ -284,7 +307,7 @@ void get_peers_information(Config &config) {
 }
 
 void reshuffle_rank(Config &config) {
-
+	config.hash_rank_mapping.clear();
 	int nproc = config.nprocs;
 	int buf[nproc];
 	if (config.rank == 0) {
@@ -299,7 +322,6 @@ void reshuffle_rank(Config &config) {
 	}
 
 	MPI_Bcast(&buf, nproc, MPI_INT, 0, MPI_COMM_WORLD);
-
 	for (int i = 0; i < nproc; i++) {
 		config.hash_rank_mapping.push_back(buf[i]);
 		if (config.rank == 0) {
@@ -308,14 +330,10 @@ void reshuffle_rank(Config &config) {
 	}
 }
 
-int run(const std::vector<std::string> &input, Config &config) {
+int run(int iteration, const std::vector<std::string> &input, Config &config) {
 
-	if (config.rank == 0) {
-		config.print();
-	}
-	reshuffle_rank(config);
-	get_peers_information(config);
-	KmerCountingListener listener(config.mpi_ipaddress, config.get_my_port(),
+	get_peers_information(iteration, config);
+	KmerCountingListener listener(config.mpi_ipaddress, config.get_my_port(iteration),
 			config.get_dbpath(), config.dbtype, false);
 	myinfo("Starting listener");
 	int status = listener.start();
@@ -336,8 +354,8 @@ int run(const std::vector<std::string> &input, Config &config) {
 
 	for (size_t i = 0; i < input.size(); i++) {
 		myinfo("processing %s", input.at(i).c_str());
-		client.process_krm_file(input.at(i), config.min_shared_kmers,
-				config.max_degree);
+		client.process_krm_file(iteration, config.n_iteration, input.at(i),
+				config.min_shared_kmers, config.max_degree);
 	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
@@ -349,9 +367,26 @@ int run(const std::vector<std::string> &input, Config &config) {
 	//cleanup listener and db
 	listener.stop();
 	myinfo("Total recved %ld kmers", listener.get_n_recv());
-	listener.dumpdb(config.get_my_output(), ' ');
+	listener.dumpdb(config.get_my_output(iteration), ' ');
 	listener.removedb();
 
 	return 0;
 }
 
+int run(const std::vector<std::string> &input, Config &config) {
+	if (config.rank == 0) {
+		config.print();
+	}
+	reshuffle_rank(config);
+
+	for (int i = 0; i < config.n_iteration; i++) {
+		if (config.rank == 0) {
+			myinfo("Starting iteration %d", i);
+		}
+
+		run(i, input, config);
+		MPI_Barrier(MPI_COMM_WORLD);
+	}
+	return 0;
+
+}

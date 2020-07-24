@@ -89,8 +89,8 @@ void LPAClient::query_and_update_nodes() {
 
 	auto &edges = state.get_edges();
 
-	size_t NODE_BATCH = edges.size() / 3;
-	NODE_BATCH = (NODE_BATCH > 10000 ? 10000 : NODE_BATCH);
+	size_t NODE_BATCH = edges.size() / 2;
+	//NODE_BATCH = (NODE_BATCH > 10000 ? 10000 : NODE_BATCH);
 
 	std::map<uint32_t, std::set<uint32_t>> request; //rank -> nodes
 	std::vector<uint32_t> nodes; //processing nodes

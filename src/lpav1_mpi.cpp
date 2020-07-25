@@ -227,7 +227,8 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	std::vector<std::string> myinput = get_my_files(config.inputpath, rank, size);
+	std::vector<std::string> myinput = get_my_files(config.inputpath, rank,
+			size);
 	myinfo("#of my input: %ld", myinput.size());
 	run(myinput, config);
 
@@ -289,8 +290,8 @@ void reshuffle_rank(Config &config) {
 	}
 }
 
-int make_graph(const std::vector<std::string> &input, LPAClient &client,
-		EdgeReadListener &listener) {
+int make_graph(int rank, const std::vector<std::string> &input,
+		LPAClient &client, EdgeReadListener &listener) {
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	for (size_t i = 0; i < input.size(); i++) {
@@ -299,10 +300,10 @@ int make_graph(const std::vector<std::string> &input, LPAClient &client,
 	}
 
 	MPI_Barrier(MPI_COMM_WORLD);
-
-	myinfo("Totally sent %ld edges", client.get_n_sent());
-	myinfo("Totally recved %ld edges", listener.get_n_recv());
-
+	if (rank == 0) {
+		myinfo("Totally sent %ld edges", client.get_n_sent());
+		myinfo("Totally recved %ld edges", listener.get_n_recv());
+	}
 	return 0;
 
 }
@@ -359,7 +360,7 @@ int run(const std::vector<std::string> &input, Config &config) {
 	}
 	MPI_Barrier(MPI_COMM_WORLD); //ensure client connected
 
-	make_graph(input, client, listener);
+	make_graph(config.rank, input, client, listener);
 	MPI_Barrier(MPI_COMM_WORLD);
 	client.getState().init();
 
@@ -383,14 +384,18 @@ int run(const std::vector<std::string> &input, Config &config) {
 	}
 
 	client.stop();
-	myinfo("Totally sent %ld records", client.get_n_sent());
+	if (config.rank == 0) {
+		myinfo("Totally sent %ld records", client.get_n_sent());
+	}
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	client.getState().dump(config.get_my_output(bucket));
 
 	//cleanup listener and db
 	listener.stop();
-	myinfo("Totally recved %ld records", listener.get_n_recv());
+	if (config.rank == 0) {
+		myinfo("Totally recved %ld records", listener.get_n_recv());
+	}
 	listener.removedb();
 
 	return 0;

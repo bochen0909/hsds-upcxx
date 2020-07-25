@@ -150,8 +150,9 @@ std::vector<std::vector<std::string>> get_my_files(
 	std::vector<std::vector<std::string>> myinput;
 	std::vector<std::string> allfiles;
 	if (get_all_files_check(folders, allfiles, rank, size)) {
-		myinfo("#of all files: %ld", allfiles.size());
-
+		if (rank == 0) {
+			myinfo("#of all files: %ld", allfiles.size());
+		}
 		if (allfiles.empty()) {
 			myerror("no input files found");
 			MPI_Abort(MPI_COMM_WORLD, -1);

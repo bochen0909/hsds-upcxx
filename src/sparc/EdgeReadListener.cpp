@@ -95,7 +95,7 @@ inline void EdgeReadListener_on_notifed_changed(zmqpp::message &message,
 #ifdef DEBUG
 		assert (edges.find(a)!=edges.end());
 #endif
-			edges[a].changed = true;
+			edges[a].nbr_changed = true;
 			self.inc_recv();
 		}
 	}

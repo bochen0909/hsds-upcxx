@@ -7,6 +7,7 @@
 
 #include <sstream>
 #include <set>
+#include "mpi.h"
 #include "gzstream.h"
 #include "log.h"
 #include "utils.h"
@@ -96,7 +97,7 @@ void LPAClient::query_and_update_nodes() {
 	std::vector<uint32_t> nodes; //processing nodes
 	for (NodeCollection::iterator itor = edges.begin(); itor != edges.end();
 			itor++) {
-		if (itor->second.changed) {
+		if (itor->second.changed || itor->second.nbr_changed) {
 
 			uint32_t this_node = itor->first;
 			nodes.push_back(this_node);
@@ -121,6 +122,7 @@ void LPAClient::query_and_update_nodes() {
 }
 
 void LPAClient::notify_changed_nodes() {
+
 	size_t npeers = peers.size();
 
 	auto &edges = state.get_edges();
@@ -164,7 +166,8 @@ void LPAClient::notify_changed_nodes() {
 void LPAClient::send_edge(std::vector<uint32_t> &from,
 		std::vector<uint32_t> &to, std::vector<float> &weight) {
 	size_t npeers = peers.size();
-	std::unordered_map<uint32_t, std::vector<std::tuple<uint32_t, uint32_t, float>>> request;
+	std::unordered_map<uint32_t,
+			std::vector<std::tuple<uint32_t, uint32_t, float>>> request;
 	for (size_t i = 0; i < from.size(); i++) {
 		uint32_t a = from.at(i);
 		uint32_t b = to.at(i);
@@ -209,10 +212,20 @@ void LPAClient::run_iteration(int i) {
 	if (rank == 0) {
 		myinfo("starting updating for iteration %d", i);
 	}
+
 	query_and_update_nodes();
 	if (rank == 0) {
 		myinfo("starting update changed info for iteration %d", i);
 	}
+
+	//first set nbr not changed;
+	auto &edges = state.get_edges();
+	for (NodeCollection::iterator itor = edges.begin(); itor != edges.end();
+			itor++) {
+		itor->second.nbr_changed = false;
+	}
+	MPI_Barrier(MPI_COMM_WORLD); //wait for all processes finished
+
 	notify_changed_nodes();
 
 }

@@ -21,9 +21,11 @@ struct NodeInfo {
 	std::vector<EdgeEnd> neighbors;
 	uint32_t label;
 	bool changed;
+	bool nbr_changed;
 	std::string to_string() {
 		std::stringstream ss;
-		ss << "changed=" << (changed ? "true" : "false") << " label=" << label
+		ss << "nbr_changed=" << (nbr_changed ? "true" : "false") << ", changed="
+				<< (changed ? "true" : "false") << " label=" << label
 				<< " neighbors=[";
 		for (auto &ee : neighbors) {
 			ss << ee.node << ":" << ee.weight << " ";

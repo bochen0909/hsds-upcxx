@@ -96,17 +96,20 @@ void LPAClient::query_and_update_nodes() {
 	std::vector<uint32_t> nodes; //processing nodes
 	for (NodeCollection::iterator itor = edges.begin(); itor != edges.end();
 			itor++) {
-		uint32_t this_node = itor->first;
-		nodes.push_back(this_node);
-		for (auto &eg : itor->second.neighbors) {
-			uint32_t node = eg.node;
-			uint32_t rank = fnv_hash(node) % npeers;
-			request[rank].insert(node);
-		}
-		if (nodes.size() >= NODE_BATCH) {
-			do_query_and_update_nodes(nodes, request);
-			nodes.clear();
-			request.clear();
+		if (itor->second.changed) {
+
+			uint32_t this_node = itor->first;
+			nodes.push_back(this_node);
+			for (auto &eg : itor->second.neighbors) {
+				uint32_t node = eg.node;
+				uint32_t rank = fnv_hash(node) % npeers;
+				request[rank].insert(node);
+			}
+			if (nodes.size() >= NODE_BATCH) {
+				do_query_and_update_nodes(nodes, request);
+				nodes.clear();
+				request.clear();
+			}
 		}
 	}
 
@@ -121,7 +124,7 @@ void LPAClient::notify_changed_nodes() {
 	size_t npeers = peers.size();
 
 	auto &edges = state.get_edges();
-	std::map<uint32_t, std::vector<uint32_t>> requests;
+	std::map<uint32_t, std::set<uint32_t>> requests;
 	for (NodeCollection::iterator itor = edges.begin(); itor != edges.end();
 			itor++) {
 		uint32_t this_node = itor->first;
@@ -129,7 +132,7 @@ void LPAClient::notify_changed_nodes() {
 			for (auto &eg : itor->second.neighbors) {
 				uint32_t node = eg.node;
 				uint32_t rank = fnv_hash(node) % npeers;
-				requests[rank].push_back(node);
+				requests[rank].insert(node);
 			}
 		}
 	}

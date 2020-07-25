@@ -48,7 +48,7 @@ void LPAState::update(uint32_t node, const std::vector<uint32_t> &nbr_labels,
 		std::unordered_map<uint32_t, float> m;
 		uint32_t mylabel = this->edges.at(node).label;
 		float sum_weight = 0;
-		size_t n_weight = 0;
+		int n_weight = 0;
 		for (size_t i = 0; i < nbr_labels.size(); i++) {
 			uint32_t label = nbr_labels.at(i);
 			if (label < smin) {

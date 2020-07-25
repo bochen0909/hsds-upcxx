@@ -33,10 +33,10 @@ NodeCollection* LPAClient::getNode() {
 	return state.getNodes();
 }
 void LPAClient::do_query_and_update_nodes(const std::vector<uint32_t> &nodes,
-		const std::map<uint32_t, std::set<uint32_t>> &request) {
+		const std::unordered_map<uint32_t, std::unordered_set<uint32_t>> &request) {
 
 	//request labels
-	std::map<uint32_t, uint32_t> labels;
+	std::unordered_map<uint32_t, uint32_t> labels;
 	for (auto &kv : request) {
 		uint32_t rank = kv.first;
 		std::vector<uint32_t> values(kv.second.begin(), kv.second.end());
@@ -90,9 +90,9 @@ void LPAClient::query_and_update_nodes() {
 	auto &edges = state.get_edges();
 
 	size_t NODE_BATCH = edges.size() / 2;
-	//NODE_BATCH = (NODE_BATCH > 10000 ? 10000 : NODE_BATCH);
+	NODE_BATCH = (NODE_BATCH > 10000 ? 10000 : NODE_BATCH);
 
-	std::map<uint32_t, std::set<uint32_t>> request; //rank -> nodes
+	std::unordered_map<uint32_t, std::unordered_set<uint32_t>> request; //rank -> nodes
 	std::vector<uint32_t> nodes; //processing nodes
 	for (NodeCollection::iterator itor = edges.begin(); itor != edges.end();
 			itor++) {
@@ -124,7 +124,7 @@ void LPAClient::notify_changed_nodes() {
 	size_t npeers = peers.size();
 
 	auto &edges = state.get_edges();
-	std::map<uint32_t, std::set<uint32_t>> requests;
+	std::unordered_map<uint32_t, std::unordered_set<uint32_t>> requests;
 	for (NodeCollection::iterator itor = edges.begin(); itor != edges.end();
 			itor++) {
 		uint32_t this_node = itor->first;
@@ -164,7 +164,7 @@ void LPAClient::notify_changed_nodes() {
 void LPAClient::send_edge(std::vector<uint32_t> &from,
 		std::vector<uint32_t> &to, std::vector<float> &weight) {
 	size_t npeers = peers.size();
-	std::map<uint32_t, std::vector<std::tuple<uint32_t, uint32_t, float>>> request;
+	std::unordered_map<uint32_t, std::vector<std::tuple<uint32_t, uint32_t, float>>> request;
 	for (size_t i = 0; i < from.size(); i++) {
 		uint32_t a = from.at(i);
 		uint32_t b = to.at(i);

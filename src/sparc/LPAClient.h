@@ -34,7 +34,7 @@ public:
 
 protected:
 	void do_query_and_update_nodes(const std::vector<uint32_t> &nodes,
-			const std::map<uint32_t, std::set<uint32_t>> &request);
+			const std::unordered_map<uint32_t, std::unordered_set<uint32_t>> &request);
 
 
 	void query_and_update_nodes();

@@ -22,8 +22,8 @@
 #include "sparc/utils.h"
 #include "kmer.h"
 #include "sparc/log.h"
-#include "sparc/KmerCountingListener.h"
-#include "sparc/EdgeCountingClient.h"
+#include "sparc/EdgeGeneratingListener.h"
+#include "sparc/EdgeGeneratingClient.h"
 #include "sparc/DBHelper.h"
 #include "mpihelper.h"
 using namespace std;
@@ -333,8 +333,8 @@ void reshuffle_rank(Config &config) {
 int run(int iteration, const std::vector<std::string> &input, Config &config) {
 
 	get_peers_information(iteration, config);
-	KmerCountingListener listener(config.mpi_ipaddress, config.get_my_port(iteration),
-			config.get_dbpath(), config.dbtype, false);
+	EdgeGeneratingListener listener(config.mpi_ipaddress, config.get_my_port(iteration),
+			config.get_dbpath(), config.dbtype);
 	myinfo("Starting listener");
 	int status = listener.start();
 	if (status != 0) {
@@ -345,7 +345,7 @@ int run(int iteration, const std::vector<std::string> &input, Config &config) {
 	//wait for all server is ready
 	MPI_Barrier(MPI_COMM_WORLD);
 	myinfo("Starting client");
-	EdgeCountingClient client(config.peers_ports, config.peers_hosts,
+	EdgeGeneratingClient client(config.peers_ports, config.peers_hosts,
 			config.hash_rank_mapping);
 	if (client.start() != 0) {
 		myerror("Start client failed");

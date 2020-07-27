@@ -16,9 +16,11 @@ public:
 			const std::string &dbpath, DBHelper::DBTYPE dbtype,
 			bool merge_append);
 	virtual ~MergeListener();
-	int start(PTHREAD_RUN_FUN fun=NULL);
+
 protected:
-	static void* merge_listener_thread_run(void *vargp);
+
+	bool on_message(Message &message);
+
 private:
 };
 

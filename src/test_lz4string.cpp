@@ -119,18 +119,20 @@ void test_message(void) {
 	uint32_t a = 12222;
 	int8_t b = 12;
 	float c = 1.2345;
-
+	string s("ADFDSFSDFDS asafd ");
 	uint32_t a2;
 	int8_t b2;
 	float c2;
+	string s2;
 	{
 		Message msg;
-		msg << a << b << c;
+		msg << a << b << s << c;
 
-		msg >> a2 >> b2 >> c2;
+		msg >> a2 >> b2 >> s2 >> c2;
 		TEST_INT_EQUAL(a, a2);
 		TEST_INT_EQUAL(b, b2);
 		TEST_DOUBLE_EQUAL(c, c2);
+		TEST_STR_EQUAL(s, s2);
 	}
 
 	{
@@ -178,25 +180,28 @@ void test_message_compressed(void) {
 	uint32_t a = 12222;
 	int8_t b = 12;
 	float c = 1.2345;
-	size_t d=123213414;
+	size_t d = 123213414;
+	string s("ADFDSFSDFDS asafd ");
 	uint32_t a2;
 	int8_t b2;
 	float c2;
 	size_t d2;
+	string s2;
 	{
 		Message msg(true);
-		msg << a << b << c << d;
+		msg << a << s << b << c << d;
 
 		zmqpp::message message;
 		message << msg;
 
 		Message msg2;
 		message >> msg2;
-		msg2 >> a2 >> b2 >> c2 >> d2;
+		msg2 >> a2 >> s2 >> b2 >> c2 >> d2;
 		TEST_INT_EQUAL(a, a2);
 		TEST_INT_EQUAL(b, b2);
 		TEST_DOUBLE_EQUAL(c, c2);
 		TEST_INT_EQUAL(d, d2);
+		TEST_STR_EQUAL(s, s2);
 
 	}
 
@@ -222,6 +227,26 @@ void test_message_compressed(void) {
 
 }
 
+void test_message_with_string(void) {
+	{
+		Message msg(true);
+		msg << "ABC" << "CDE";
+		std::string a, b;
+		msg >> a >> b;
+		TEST_STR_EQUAL("ABC", a);
+		TEST_STR_EQUAL("CDE", b);
+	}
+
+	{
+		Message msg;
+		msg << "ABCD" << "CDE";
+		std::string a, b;
+		msg >> a >> b;
+		TEST_STR_EQUAL("ABCD", a);
+		TEST_STR_EQUAL("CDE", b);
+	}
+}
+
 TEST_LIST = { {"test_LZ4String", test_LZ4String},
 
 	{	"test_LZ4String_and_zmq_message", test_LZ4String_and_zmq_message},
@@ -229,6 +254,8 @@ TEST_LIST = { {"test_LZ4String", test_LZ4String},
 	{	"test_message", test_message},
 
 	{	"test_message_compressed",test_message_compressed},
+
+	{	"test_message_with_string",test_message_with_string},
 
 	{	NULL, NULL}};
 

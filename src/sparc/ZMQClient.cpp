@@ -24,10 +24,10 @@ using namespace sparc;
 ZMQClient::ZMQClient(const std::vector<int> &peers_ports,
 		const std::vector<std::string> &peers_hosts,
 		const std::vector<int> &hash_rank_mapping) :
-		peers_ports(peers_ports), peers_hosts(peers_hosts), hash_rank_mapping(
-				hash_rank_mapping), context(NULL), n_send(0), b_compress_message(
-				false) {
+		AbstractClient(hash_rank_mapping), peers_ports(peers_ports), peers_hosts(
+				peers_hosts), context(NULL) {
 	assert(peers_hosts.size() == peers_ports.size());
+	assert(hash_rank_mapping.size() == peers_ports.size());
 
 	std::string v = get_env("SPARC_COMPRESS_MESSAGE");
 	trim(v);
@@ -61,10 +61,6 @@ int ZMQClient::stop() {
 	return 0;
 }
 
-uint64_t ZMQClient::get_n_sent() {
-	return n_send;
-}
-
 int ZMQClient::start() {
 	n_send = 0;
 	context = new zmqpp::context();
@@ -87,3 +83,16 @@ int ZMQClient::start() {
 	return 0;
 }
 
+void ZMQClient::send(size_t rank, const Message &msg) {
+	zmqpp::socket *socket = peers[rank];
+	zmqpp::message message;
+	message << msg;
+	socket->send(message);
+}
+
+void ZMQClient::recv(size_t rank, Message &msg) {
+	zmqpp::socket *socket = peers[rank];
+	zmqpp::message message;
+	socket->receive(message);
+	message >> msg;
+}

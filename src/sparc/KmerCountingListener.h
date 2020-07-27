@@ -9,36 +9,26 @@
 #define SOURCE_DIRECTORY__SRC_SPARC_KMERCOUNTINGLISTENER_H_
 
 #include <string>
-#include "DBHelper.h"
+#include "AbstractListener.h"
 
-typedef void* (*PTHREAD_RUN_FUN)(void*);
+#ifdef USE_MPICLIENT
+#include "MPIListener.h"
+	class KmerCountingListener:public MPIListener {
+#else
+#include "ZMQListener.h"
+class KmerCountingListener: public ZMQListener {
+#endif
 
-class KmerCountingListener {
 public:
 	KmerCountingListener(const std::string &hostname, int port,
 			const std::string &dbpath, DBHelper::DBTYPE dbtype,
-			bool do_kr_mapping = false);
+			bool do_appending = false);
 	virtual ~KmerCountingListener();
 
-	virtual int start(PTHREAD_RUN_FUN fun = NULL);
-	virtual int stop();
-	virtual uint64_t get_n_recv();
-	virtual int removedb();
-	virtual void inc_recv();
-	virtual int dumpdb(const std::string &filepath, char sep = '\t');
+	bool on_message(Message &message);
+
 protected:
-	static void* thread_run(void *vargp);
-protected:
-	std::string hostname;
-	int port;
-	bool going_stop;
-	pthread_t thread_id;
-	bool thread_stopped;
-	std::string dbpath;
-	DBHelper *dbhelper;
-	DBHelper::DBTYPE dbtype;
-	uint64_t n_recv;
-	bool do_kr_mapping;
+
 };
 
 #endif /* SOURCE_DIRECTORY__SRC_SPARC_KMERCOUNTINGLISTENER_H_ */

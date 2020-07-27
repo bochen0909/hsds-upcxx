@@ -118,8 +118,8 @@ int main(int argc, char **argv) {
 	set_spdlog_pattern(config.mpi_hostname.c_str(), rank);
 
 	if (rank == 0) {
-			myinfo("Welcome to Sparc!");
-		}
+		myinfo("Welcome to Sparc!");
+	}
 
 	argagg::parser argparser { {
 
@@ -185,7 +185,7 @@ int main(int argc, char **argv) {
 			config.dbtype = DBHelper::LEVEL_DB;
 #else
 			cerr
-			<< "was not compiled with leveldb suppot. Please cmake with BUILD_WITH_LEVELDB=ON"
+					<< "was not compiled with leveldb suppot. Please cmake with BUILD_WITH_LEVELDB=ON"
 					<< dbtype << endl;
 			return EXIT_FAILURE;
 #endif
@@ -245,7 +245,6 @@ int main(int argc, char **argv) {
 			return EXIT_FAILURE;
 		}
 	}
-
 
 	std::vector<std::string> myinput = get_my_files(inputpath, rank, size);
 
@@ -328,7 +327,7 @@ int run(const std::vector<std::string> &input, Config &config) {
 	MPI_Barrier(MPI_COMM_WORLD);
 	myinfo("Starting client");
 	KmerCountingClient client(config.peers_ports, config.peers_hosts,
-			config.hash_rank_mapping);
+			config.hash_rank_mapping, false);
 	if (client.start() != 0) {
 		myerror("Start client failed");
 		MPI_Abort( MPI_COMM_WORLD, -1);

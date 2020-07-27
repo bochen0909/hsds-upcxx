@@ -17,6 +17,25 @@ Message::~Message() {
 
 }
 
+Message& Message::operator<<(const std::string& s){
+	add_raw( (uint8_t*) s.data(),s.length());
+	char null ='\0';
+	add_raw((uint8_t*) &null, 1);
+	return *this;
+}
+
+Message& Message::operator>>(std::string& s){
+	uint8_t *p = data.data();
+	p += curr_ptr;
+	while(*p){
+		s.push_back(*p);
+		p++;
+		curr_ptr++;
+	}
+	curr_ptr++; //skip null
+	return *this;
+}
+
 Message& Message::operator<<(uint32_t i) {
 	add_raw(reinterpret_cast<uint8_t*>(&i), sizeof(uint32_t));
 	return *this;

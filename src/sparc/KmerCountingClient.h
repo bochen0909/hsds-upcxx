@@ -10,14 +10,19 @@
 
 #include <vector>
 #include <string>
-#include <zmqpp/zmqpp.hpp>
-#include "ZMQClient.h"
 
+
+
+#ifdef USE_MPICLIENT
+#include "MPIClient.h"
+class KmerCountingClient:public MPIClient {
+#else
+#include "ZMQClient.h"
 class KmerCountingClient:public ZMQClient {
+#endif
 public:
 	KmerCountingClient(const std::vector<int> &peers_ports,
-			const std::vector<std::string> &peers_hosts,const std::vector<int> &hash_rank_mapping, bool do_kr_mapping =
-					false);
+			const std::vector<std::string> &peers_hosts,const std::vector<int> &hash_rank_mapping, bool do_appending);
 	virtual ~KmerCountingClient();
 
 
@@ -28,11 +33,11 @@ protected:
 	inline virtual void map_line(const std::string &line, int kmer_length,
 			bool without_canonical_kmer, std::vector<std::string> &kmers,
 			std::vector<uint32_t> &nodeids);
-	template<typename V> void send_kmers(const std::vector<string> &kmers,
+	template<typename V> void send_kmers(const std::vector<std::string> &kmers,
 			const std::vector<V> &nodeids);
-protected:
 
-	bool do_kr_mapping;
+protected:
+	bool do_appending;
 };
 
 #endif /* SOURCE_DIRECTORY__SRC_SPARC_KMERCOUNTINGCLIENT_H_ */

@@ -22,6 +22,7 @@ option(BUILD_SPARC_MRMPI "build MR-MPI version of Sparc" ON)
 option(BUILD_SPARC_MPI "build pure MPI version of Sparc" ON)
 
 option(BUILD_WITH_LEVELDB "build MPI version of Sparc with leveldb support" OFF)
+option(BUILD_WITH_MPIClient "build MPI version of Sparc with mpi client" OFF)
 
 set(LOCAL_EXT_PREFIX_DIR ${PROJECT_SOURCE_DIR}/extlib/local)       
 
@@ -282,7 +283,11 @@ if(BUILD_SPARC_MIMIR)
 		src/kmer.cpp src/sparc/log.cpp 
 		src/sparc/KmerCountingListener.cpp
 		src/sparc/KmerCountingClient.cpp
+		src/sparc/AbstractClient.cpp
+		src/sparc/AbstractListener.cpp
 		src/sparc/ZMQClient.cpp
+		src/sparc/ZMQListener.cpp
+		src/sparc/Message.cpp
 		src/sparc/DBHelper.cpp
 		src/sparc/LZ4String.cpp
 		src/sparc/utils.cpp
@@ -293,7 +298,11 @@ if(BUILD_SPARC_MIMIR)
 		src/sparc/KmerCountingListener.cpp
 		src/sparc/KmerCountingClient.cpp
 		src/sparc/ZMQClient.cpp
+		src/sparc/ZMQListener.cpp
+		src/sparc/AbstractClient.cpp
+		src/sparc/AbstractListener.cpp		
 		src/sparc/DBHelper.cpp
+		src/sparc/Message.cpp
 		src/sparc/LZ4String.cpp
 		src/sparc/utils.cpp
 		)	
@@ -301,12 +310,15 @@ if(BUILD_SPARC_MIMIR)
 	add_executable(edge_generating_mpi 
 		src/edge_generating_mpi.cpp 
 		src/kmer.cpp src/sparc/log.cpp 
-		src/sparc/KmerCountingListener.cpp
-		src/sparc/EdgeCountingClient.cpp
-		src/sparc/KmerCountingClient.cpp
+		src/sparc/EdgeGeneratingListener.cpp
+		src/sparc/EdgeGeneratingClient.cpp
 		src/sparc/ZMQClient.cpp
+		src/sparc/ZMQListener.cpp
+		src/sparc/AbstractClient.cpp		
+		src/sparc/AbstractListener.cpp
 		src/sparc/DBHelper.cpp
 		src/sparc/LZ4String.cpp
+		src/sparc/Message.cpp
 		src/sparc/utils.cpp
 		)	
 
@@ -316,9 +328,13 @@ if(BUILD_SPARC_MIMIR)
 		src/sparc/MergeListener.cpp		 
 		src/sparc/KmerCountingListener.cpp
 		src/sparc/KmerCountingClient.cpp
+		src/sparc/AbstractListener.cpp
+		src/sparc/AbstractClient.cpp
 		src/sparc/ZMQClient.cpp
+		src/sparc/ZMQListener.cpp
 		src/sparc/DBHelper.cpp
 		src/sparc/LZ4String.cpp
+		src/sparc/Message.cpp
 		src/sparc/utils.cpp
 		src/kmer.cpp src/sparc/log.cpp		
 		)	
@@ -328,8 +344,11 @@ if(BUILD_SPARC_MIMIR)
 		src/sparc/LPAState.cpp
 		src/sparc/LPAClient.cpp
 		src/sparc/ZMQClient.cpp
-		src/sparc/KmerCountingListener.cpp		 
-		src/sparc/EdgeReadListener.cpp
+		src/sparc/MPIClient.cpp
+		src/sparc/AbstractClient.cpp
+		src/sparc/ZMQListener.cpp
+		src/sparc/AbstractListener.cpp
+		src/sparc/LPAListener.cpp
 		src/sparc/DBHelper.cpp
 		src/sparc/Message.cpp
 		src/sparc/LZ4String.cpp
@@ -338,6 +357,9 @@ if(BUILD_SPARC_MIMIR)
 		)	
 					
 	foreach(EXEC kmer_counting_mpi kmer_read_mapping_mpi edge_generating_mpi merge_intrmed_mpi lpav1_mpi)
+		if(BUILD_WITH_MPIClient)
+			set_target_properties(${EXEC} PROPERTIES COMPILE_FLAGS "-DUSE_MPICLIENT")
+		endif()
 		if(BUILD_WITH_LEVELDB)
 			target_sources( ${EXEC} src/sparc/LevelDBHelper.cpp)
 			add_dependencies(${EXEC} leveldblib)
@@ -356,6 +378,7 @@ if(BUILD_SPARC_MIMIR)
 	#some specials
 	set_target_properties(merge_intrmed_mpi PROPERTIES COMPILE_FLAGS "-DUSE_TSL_ROBIN_MAP")
 	add_dependencies(merge_intrmed_mpi tsl_robin_map_lib)
+	
 	
 endif()
 

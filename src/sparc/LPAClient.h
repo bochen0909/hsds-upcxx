@@ -11,10 +11,17 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <unordered_map>
+#include <unordered_set>
 #include "LPAState.h"
-#include "ZMQClient.h"
 
+#ifdef USE_MPICLIENT
+#include "MPIClient.h"
+class LPAClient: public MPIClient {
+#else
+#include "ZMQClient.h"
 class LPAClient: public ZMQClient {
+#endif
 public:
 	LPAClient(const std::vector<int> &peers_ports,
 			const std::vector<std::string> &peers_hosts,

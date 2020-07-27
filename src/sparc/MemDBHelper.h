@@ -107,32 +107,32 @@ private:
 
 };
 
-template<> void MemDBHelper<std::string, uint32_t>::put(const std::string &key,
+template<> inline void MemDBHelper<std::string, uint32_t>::put(const std::string &key,
 		uint32_t n) {
 	store[key] = n;
 }
 
-template<> void MemDBHelper<std::string, uint32_t>::incr(const std::string &key,
+template<> inline void MemDBHelper<std::string, uint32_t>::incr(const std::string &key,
 		uint32_t n) {
 	store[key] += n;
 }
 
-template<> void MemDBHelper<std::string, std::string>::put(
+template<> inline void MemDBHelper<std::string, std::string>::put(
 		const std::string &key, const std::string &val) {
 	store[key] = val;
 }
 
-template<> void MemDBHelper<std::string, std::string>::append(
+template<> inline void MemDBHelper<std::string, std::string>::append(
 		const std::string &key, const std::string &val) {
 	store[key] += (std::string(" ") + val);
 }
 
-template<> void MemDBHelper<std::string, LZ4String>::put(const std::string &key,
+template<> inline void MemDBHelper<std::string, LZ4String>::put(const std::string &key,
 		const std::string &val) {
 	store[key] = val;
 }
 
-template<> void MemDBHelper<std::string, LZ4String>::append(
+template<> inline void MemDBHelper<std::string, LZ4String>::append(
 		const std::string &key, const std::string &val) {
 	store[key] += (std::string(" ") + val);
 }

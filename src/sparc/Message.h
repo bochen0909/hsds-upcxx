@@ -27,6 +27,9 @@ public:
 	Message& operator<<(size_t i);
 	Message& operator>>(size_t& i);
 
+	Message& operator>>(std::string& i);
+	Message& operator<<(const std::string& i);
+
 
 	friend zmqpp::message& operator<<(zmqpp::message &stream, const Message &other);
 	friend zmqpp::message& operator>>(zmqpp::message &stream, Message &other);

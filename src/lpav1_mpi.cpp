@@ -24,9 +24,9 @@
 #include "sparc/log.h"
 #include "sparc/DBHelper.h"
 #include "sparc/LPAState.h"
-#include "sparc/EdgeReadListener.h"
 #include "sparc/LPAClient.h"
 #include "mpihelper.h"
+#include "sparc/LPAListener.h"
 using namespace std;
 using namespace sparc;
 
@@ -291,7 +291,7 @@ void reshuffle_rank(Config &config) {
 }
 
 int make_graph(int rank, const std::vector<std::string> &input,
-		LPAClient &client, EdgeReadListener &listener) {
+		LPAClient &client, LPAListener &listener) {
 	MPI_Barrier(MPI_COMM_WORLD);
 
 	for (size_t i = 0; i < input.size(); i++) {
@@ -329,6 +329,7 @@ bool check_finished(LPAClient &client, Config &config) {
 int run(const std::vector<std::string> &input, Config &config) {
 
 	int bucket = 0;
+	reshuffle_rank(config);
 	get_peers_information(0, config);
 	MPI_Barrier(MPI_COMM_WORLD);
 
@@ -338,7 +339,7 @@ int run(const std::vector<std::string> &input, Config &config) {
 
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	EdgeReadListener listener(config.mpi_ipaddress, config.get_my_port(bucket),
+	LPAListener listener(config.mpi_ipaddress, config.get_my_port(bucket),
 			config.get_dbpath(bucket), config.dbtype, client.getNode());
 	if (config.rank == 0) {
 		myinfo("Starting make-graph listener");

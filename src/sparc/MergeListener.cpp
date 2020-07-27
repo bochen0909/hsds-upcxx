@@ -30,99 +30,22 @@ MergeListener::MergeListener(const std::string &hostname, int port,
 MergeListener::~MergeListener() {
 }
 
-void* MergeListener::merge_listener_thread_run(void *vargp) {
-	MergeListener &self = *(MergeListener*) vargp;
-	DBHelper &dbhelper = *self.dbhelper;
-	self.n_recv = 0;
-	self.thread_stopped = false;
-	string endpoint = "tcp://" + self.hostname + ":"
-			+ std::to_string(self.port);
+bool MergeListener::on_message(Message &message) {
+	size_t N;
+	message >> N;
+	for (size_t i = 0; i < N; i++) {
 
-	zmqpp::context context;
-
-	// generate a pull socket
-	zmqpp::socket_type type = zmqpp::socket_type::reply;
-	zmqpp::socket socket(context, type);
-	socket.set(zmqpp::socket_option::receive_timeout, 1000);
-
-	// bind to the socket
-	myinfo("Binding to %s", endpoint.c_str());
-	socket.bind(endpoint);
-	myinfo("Starting receiving message");
-	while (!self.going_stop) {
-		// receive the message
-		zmqpp::message message;
-		// decompose the message
-		if (!socket.receive(message)) {
-			continue;
-		}
-		bool b_compress_message;
-		message >> b_compress_message;
-		if (b_compress_message) {
-			LZ4String lz4str;
-			message >> lz4str;
-			string s = lz4str.toString();
-			//cout << "recv " << s << endl;
-			std::vector<std::string> v;
-			sparc::split(v, s, ",");
-			size_t N = std::stoul(v.at(0));
-			if (N + 1 != v.size()) {
-				myerror("expected %ld items, but got %ld:\n", N - 1, v.size(),
-						s.c_str());
-				throw -1;
-			}
-			assert(N + 1 == v.size());
-			for (size_t i = 1; i < v.size(); i++) {
-				if (self.do_kr_mapping) {
-					stringstream ss(v.at(i));
-					string val;
-					string key;
-					ss >> key >> val;
-					dbhelper.append(key, val);
-				} else {
-					stringstream ss(v.at(i));
-					size_t val;
-					string key;
-					ss >> key >> val;
-					dbhelper.incr(key, val);
-				}
-				++self.n_recv;
-			}
-
+		string key;
+		string val;
+		message >> key >> val;
+		if (do_appending) {
+			dbhelper->append(key, val);
 		} else {
-			size_t N;
-			message >> N;
-			for (size_t i = 0; i < N; i++) {
-				if (self.do_kr_mapping) {
-					string key;
-					string val;
-					message >> key >> val;
-					dbhelper.append(key, val);
-				} else {
-					string key;
-					string val;
-					message >> key >> val;
-					dbhelper.incr(key, std::stoul(val));
-				}
-				++self.n_recv;
-			}
+			dbhelper->incr(key, std::stoul(val));
 		}
-		zmqpp::message message2;
-		message2 << "OK";
-		socket.send(message2);
 	}
-
-	//std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-	socket.close();
-	self.thread_stopped = true;
-	pthread_exit(NULL);
-}
-
-int MergeListener::start(PTHREAD_RUN_FUN fun) {
-	if (fun == NULL) {
-		fun = merge_listener_thread_run;
-	}
-
-	return KmerCountingListener::start(fun);
-
+	Message message2;
+	message2 << "OK";
+	this->send(message2);
+	return true;
 }

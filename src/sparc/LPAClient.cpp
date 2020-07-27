@@ -25,9 +25,12 @@ LPAClient::LPAClient(const std::vector<int> &peers_ports,
 		const std::vector<std::string> &peers_hosts,
 		const std::vector<int> &hash_rank_mapping, size_t smin, bool weighted,
 		int rank) :
-		ZMQClient(peers_ports, peers_hosts, hash_rank_mapping), state(smin), weighted(
-				weighted), rank(rank) {
-
+#ifdef USE_MPICLIENT
+		MPIClient(hash_rank_mapping)
+#else
+		ZMQClient(peers_ports, peers_hosts, hash_rank_mapping)
+#endif
+		, state(smin), weighted(weighted), rank(rank) {
 }
 
 NodeCollection* LPAClient::getNode() {
@@ -41,21 +44,21 @@ void LPAClient::do_query_and_update_nodes(const std::vector<uint32_t> &nodes,
 	for (auto &kv : request) {
 		uint32_t rank = kv.first;
 		std::vector<uint32_t> values(kv.second.begin(), kv.second.end());
-		zmqpp::socket *socket = peers[rank];
+		//zmqpp::socket *socket = peers[rank];
 		Message msg(b_compress_message);
-		msg << values.size();
+		msg << LPAV1_QUERY_LABELS<<  values.size();
 		for (size_t i = 0; i < values.size(); i++) {
 			msg << values.at(i);
 		}
 
-		zmqpp::message message;
-		message << LPAV1_QUERY_LABELS << msg;
-		socket->send(message);
-
-		zmqpp::message message2;
-		socket->receive(message2);
+		//zmqpp::message message;
+		//(*this)<< LPAV1_QUERY_LABELS << msg;
+		//socket->send(message);
+		this->send(rank, msg);
+		//zmqpp::message message2;
+		//socket->receive(message2);
 		Message msg2;
-		message2 >> msg2;
+		this->recv(rank, msg2);
 		size_t N;
 		msg2 >> N;
 		assert(N == values.size());
@@ -85,8 +88,6 @@ void LPAClient::do_query_and_update_nodes(const std::vector<uint32_t> &nodes,
 	}
 }
 void LPAClient::query_and_update_nodes() {
-
-	size_t npeers = peers.size();
 
 	auto &edges = state.get_edges();
 
@@ -123,7 +124,6 @@ void LPAClient::query_and_update_nodes() {
 
 void LPAClient::notify_changed_nodes() {
 
-	size_t npeers = peers.size();
 
 	auto &edges = state.get_edges();
 	std::unordered_map<uint32_t, std::unordered_set<uint32_t>> requests;
@@ -141,19 +141,22 @@ void LPAClient::notify_changed_nodes() {
 
 	for (auto &kv : requests) {
 		uint32_t rank = kv.first;
-		zmqpp::socket *socket = peers[rank];
+		//zmqpp::socket *socket = peers[rank];
 
 		Message mymsg(b_compress_message);
 
-		mymsg << kv.second.size();
+		mymsg << LPAV1_UPDATE_CHANGED << kv.second.size();
 		for (uint32_t node : kv.second) {
 			mymsg << node;
 		}
-		zmqpp::message message;
-		message << LPAV1_UPDATE_CHANGED << mymsg;
-		socket->send(message);
-		zmqpp::message message2;
-		socket->receive(message2);
+		//zmqpp::message message;
+		//message << LPAV1_UPDATE_CHANGED << mymsg;
+		//socket->send(message);
+		this->send(rank,mymsg);
+		//zmqpp::message message2;
+		//socket->receive(message2);
+		Message message2;
+		this->recv(rank, message2);
 		std::string reply;
 		message2 >> reply;
 		if (reply != "OK") {
@@ -165,7 +168,7 @@ void LPAClient::notify_changed_nodes() {
 
 void LPAClient::send_edge(std::vector<uint32_t> &from,
 		std::vector<uint32_t> &to, std::vector<float> &weight) {
-	size_t npeers = peers.size();
+
 	std::unordered_map<uint32_t,
 			std::vector<std::tuple<uint32_t, uint32_t, float>>> request;
 	for (size_t i = 0; i < from.size(); i++) {
@@ -179,10 +182,10 @@ void LPAClient::send_edge(std::vector<uint32_t> &from,
 	for (auto &kv : request) {
 		uint32_t rank = kv.first;
 		const auto &v = kv.second;
-		zmqpp::socket *socket = peers[rank];
+		//zmqpp::socket *socket = peers[rank];
 
 		Message mymsg(b_compress_message);
-		mymsg << v.size();
+		mymsg << LPAV1_INIT_GRAPH << v.size();
 		for (const auto &t : v) {
 			uint32_t a;
 			uint32_t b;
@@ -192,12 +195,15 @@ void LPAClient::send_edge(std::vector<uint32_t> &from,
 			n_send++;
 		}
 
-		zmqpp::message message;
-		message << LPAV1_INIT_GRAPH << mymsg;
-		socket->send(message);
+		//zmqpp::message message;
+		//message << LPAV1_INIT_GRAPH << mymsg;
+		//socket->send(message);
+		this->send(rank,mymsg);
 
-		zmqpp::message message2;
-		socket->receive(message2);
+		//zmqpp::message message2;
+		//socket->receive(message2);
+		Message message2;
+		this->recv(rank,message2);
 		std::string reply;
 		message2 >> reply;
 		if (reply != "OK") {

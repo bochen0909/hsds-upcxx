@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <sstream>
 #include <iostream>
-#include <zmqpp/zmqpp.hpp>
 #include "gzstream.h"
 #include "log.h"
 #include "../kmer.h"
@@ -22,13 +21,16 @@ using namespace sparc;
 
 KmerCountingClient::KmerCountingClient(const std::vector<int> &peers_ports,
 		const std::vector<std::string> &peers_hosts,
-		const std::vector<int> &hash_rank_mapping, bool do_kr_mapping) :
-		ZMQClient(peers_ports, peers_hosts, hash_rank_mapping), do_kr_mapping(
-				do_kr_mapping) {
+		const std::vector<int> &hash_rank_mapping, bool do_appending) :
+#ifdef USE_MPICLIENT
+		MPIClient(hash_rank_mapping,do_appending),
+#else
+				ZMQClient(peers_ports, peers_hosts, hash_rank_mapping),
+#endif
+				do_appending(do_appending) {
 }
 
 KmerCountingClient::~KmerCountingClient() {
-	stop();
 }
 
 template<typename V> void KmerCountingClient::send_kmers(
@@ -42,44 +44,21 @@ template<typename V> void KmerCountingClient::send_kmers(
 		size_t k = fnv_hash(s) % npeers;
 		k = hash_rank_mapping[k];
 		kmermap[k].push_back(s);
-		if (do_kr_mapping) {
+		if (do_appending) {
 			nodeidmap[k].push_back(nodeids.at(i));
 		}
 	}
 
 	for (std::map<size_t, std::vector<string>>::iterator it = kmermap.begin();
 			it != kmermap.end(); it++) {
-		zmqpp::socket *socket = peers[it->first];
-		zmqpp::message message;
-		message << b_compress_message;
-		if (b_compress_message) {
-			stringstream ss;
-			char deli = ',';
-			size_t N = it->second.size();
-			ss << N << deli;
+		Message message;
+		size_t rank = it->first;
+		if (true) {
 
-			if (do_kr_mapping) {
-				std::vector<V> &v = nodeidmap.at(it->first);
-				for (size_t i = 0; i < N; i++) {
-					ss << it->second.at(i) << " " << v.at(i) << deli;
-					++n_send;
-				}
-			} else {
-				for (size_t i = 0; i < N; i++) {
-					ss << it->second.at(i) << deli;
-					++n_send;
-				}
-			}
-			std::string s = ss.str();
-			//cout << "send " << s << endl;
-			LZ4String lz4str(s);
-			message << lz4str;
-
-		} else {
 			size_t N = it->second.size();
 			message << N;
 
-			if (do_kr_mapping) {
+			if (do_appending) {
 				std::vector<V> &v = nodeidmap.at(it->first);
 				for (size_t i = 0; i < N; i++) {
 					message << it->second.at(i) << v.at(i);
@@ -92,9 +71,9 @@ template<typename V> void KmerCountingClient::send_kmers(
 				}
 			}
 		}
-		socket->send(message);
-		zmqpp::message message2;
-		socket->receive(message2);
+		this->send(rank, message);
+		Message message2;
+		this->recv(rank, message2);
 		std::string reply;
 		message2 >> reply;
 		if (reply != "OK") {
@@ -123,7 +102,7 @@ void KmerCountingClient::map_line(const string &line, int kmer_length,
 			!without_canonical_kmer);
 	for (size_t i = 0; i < v.size(); i++) {
 		kmers.push_back(kmer_to_base64(v[i]));
-		if (do_kr_mapping) {
+		if (do_appending) {
 			nodeids.push_back(nodeid);
 		}
 	}

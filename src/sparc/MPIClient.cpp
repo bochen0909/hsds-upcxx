@@ -93,7 +93,6 @@ void MPIClient::sendAndReply_batch(std::vector<RequestAndReply> &rps) {
 				MPI_Status status;
 				int index;
 				MPI_Waitany(N, send_requests, &index, &status);
-				free(buff[index]);
 			}
 			if (!array_finished[i]) {
 				auto &reqmsg = *requests.at(i);
@@ -139,6 +138,7 @@ void MPIClient::sendAndReply_batch(std::vector<RequestAndReply> &rps) {
 
 	for (size_t i = 0; i < N; i++) {
 		assert(rps[i].reply.get());
+		free(buff[i]);
 	}
 
 }

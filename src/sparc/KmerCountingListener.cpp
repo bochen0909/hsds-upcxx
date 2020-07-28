@@ -35,7 +35,8 @@ KmerCountingListener::KmerCountingListener(const std::string &hostname,
 KmerCountingListener::~KmerCountingListener() {
 
 }
-bool KmerCountingListener::on_message(Message &message) {
+
+bool KmerCountingListener::on_message(Message &message, Message &message2) {
 	size_t N;
 	message >> N;
 	for (size_t i = 0; i < N; i++) {
@@ -50,8 +51,6 @@ bool KmerCountingListener::on_message(Message &message) {
 			dbhelper->incr(kmer);
 		}
 	}
-	Message message2;
 	message2 << "OK";
-	this->send(message2);
 	return true;
 }

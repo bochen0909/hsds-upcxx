@@ -285,8 +285,6 @@ if(BUILD_SPARC_MIMIR)
 		src/sparc/KmerCountingClient.cpp
 		src/sparc/AbstractClient.cpp
 		src/sparc/AbstractListener.cpp
-		src/sparc/ZMQClient.cpp
-		src/sparc/ZMQListener.cpp
 		src/sparc/Message.cpp
 		src/sparc/DBHelper.cpp
 		src/sparc/LZ4String.cpp
@@ -297,8 +295,6 @@ if(BUILD_SPARC_MIMIR)
 		src/kmer.cpp src/sparc/log.cpp 
 		src/sparc/KmerCountingListener.cpp
 		src/sparc/KmerCountingClient.cpp
-		src/sparc/ZMQClient.cpp
-		src/sparc/ZMQListener.cpp
 		src/sparc/AbstractClient.cpp
 		src/sparc/AbstractListener.cpp		
 		src/sparc/DBHelper.cpp
@@ -312,8 +308,6 @@ if(BUILD_SPARC_MIMIR)
 		src/kmer.cpp src/sparc/log.cpp 
 		src/sparc/EdgeGeneratingListener.cpp
 		src/sparc/EdgeGeneratingClient.cpp
-		src/sparc/ZMQClient.cpp
-		src/sparc/ZMQListener.cpp
 		src/sparc/AbstractClient.cpp		
 		src/sparc/AbstractListener.cpp
 		src/sparc/DBHelper.cpp
@@ -330,8 +324,6 @@ if(BUILD_SPARC_MIMIR)
 		src/sparc/KmerCountingClient.cpp
 		src/sparc/AbstractListener.cpp
 		src/sparc/AbstractClient.cpp
-		src/sparc/ZMQClient.cpp
-		src/sparc/ZMQListener.cpp
 		src/sparc/DBHelper.cpp
 		src/sparc/LZ4String.cpp
 		src/sparc/Message.cpp
@@ -343,10 +335,7 @@ if(BUILD_SPARC_MIMIR)
 		src/lpav1_mpi.cpp
 		src/sparc/LPAState.cpp
 		src/sparc/LPAClient.cpp
-		src/sparc/ZMQClient.cpp
-		src/sparc/MPIClient.cpp
 		src/sparc/AbstractClient.cpp
-		src/sparc/ZMQListener.cpp
 		src/sparc/AbstractListener.cpp
 		src/sparc/LPAListener.cpp
 		src/sparc/DBHelper.cpp
@@ -356,9 +345,14 @@ if(BUILD_SPARC_MIMIR)
 		src/kmer.cpp src/sparc/log.cpp		
 		)	
 					
+					
+					
 	foreach(EXEC kmer_counting_mpi kmer_read_mapping_mpi edge_generating_mpi merge_intrmed_mpi lpav1_mpi)
 		if(BUILD_WITH_MPIClient)
+			target_sources(${EXEC} PRIVATE src/sparc/MPIClient.cpp src/sparc/MPIListener.cpp)
 			set_target_properties(${EXEC} PROPERTIES COMPILE_FLAGS "-DUSE_MPICLIENT")
+		else()
+			target_sources( ${EXEC} PRIVATE src/sparc/ZMQClient.cpp src/sparc/ZMQListener.cpp )
 		endif()
 		if(BUILD_WITH_LEVELDB)
 			target_sources( ${EXEC} src/sparc/LevelDBHelper.cpp)

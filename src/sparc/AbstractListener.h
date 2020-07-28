@@ -13,11 +13,13 @@
 #include "Message.h"
 
 typedef void* (*PTHREAD_RUN_FUN)(void*);
+//typedef void* (*MESSAGE_CALLBACK_FUN)(Message&);
+typedef std::function<void(Message&)> MESSAGE_CALLBACK_FUN;
 
 class AbstractListener {
 public:
 	AbstractListener(const std::string &dbpath, DBHelper::DBTYPE dbtype,
-			bool do_appending = false);
+			bool do_appending);
 	virtual ~AbstractListener();
 
 	virtual int start();
@@ -31,8 +33,11 @@ public:
 	virtual void before_thread_run()=0;
 	virtual void after_thread_run()=0;
 	virtual bool recv(Message &msg)=0; //try to recv a message;
+	virtual void send(Message &msg)=0;
+
 	virtual bool on_message(Message &msg)=0; //process the message;
-	virtual void send(const Message &msg)=0;
+	virtual bool on_message(Message &msg, Message &out)=0; //process the message;
+	virtual bool on_message(Message &msg, MESSAGE_CALLBACK_FUN &fun);
 
 protected:
 	static void* thread_run(void *vargp);

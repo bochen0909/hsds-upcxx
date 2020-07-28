@@ -48,6 +48,13 @@ AbstractListener::~AbstractListener() {
 	}
 }
 
+bool AbstractListener::on_message(Message &msg, MESSAGE_CALLBACK_FUN &fun){
+	Message out(need_compress_message());
+	on_message(msg,out);
+	fun(out);
+	return true;
+}
+
 int AbstractListener::dumpdb(const string &filepath, char sep) {
 	if (dbhelper) {
 		return dbhelper->dump(filepath, sep);
@@ -131,7 +138,6 @@ void* AbstractListener::thread_run(void *vargp) {
 			continue;
 		}
 		self.on_message(message);
-		++self.n_recv;
 	}
 	self.after_thread_run();
 	self.thread_stopped = true;

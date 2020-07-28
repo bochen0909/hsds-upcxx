@@ -19,7 +19,7 @@ public:
 
 protected:
 
-	bool on_message(Message &message);
+	bool on_message(Message &message, Message &out);
 
 private:
 };

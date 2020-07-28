@@ -18,18 +18,18 @@ class LPAListener: public MPIListener {
 class LPAListener: public ZMQListener {
 #endif
 public:
-	LPAListener(const std::string &hostname, int port,
+	LPAListener(int rank, int word_size, const std::string &hostname, int port,
 			const std::string &dbpath, DBHelper::DBTYPE dbtype,
 			NodeCollection *edges);
 	virtual ~LPAListener();
 	NodeCollection* getEdges();
+	bool on_message(Message &message, Message &msgout);
 
-	virtual bool on_message(Message &msg);
 protected:
 
-	inline void on_initial_graph(Message &message);
-	inline void on_notifed_changed(Message &message);
-	inline void on_query_node(Message &message);
+	inline void on_initial_graph(Message &message, Message &msgout);
+	inline void on_notifed_changed(Message &message, Message &msgout);
+	inline void on_query_node(Message &message, Message &msgout);
 
 protected:
 

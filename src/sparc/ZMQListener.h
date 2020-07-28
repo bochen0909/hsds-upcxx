@@ -20,7 +20,9 @@ public:
 	virtual void before_thread_run();
 	virtual void after_thread_run();
 	virtual bool recv(Message &msg);
-	virtual void send(const Message &msg);
+	virtual void send(Message &msg);
+	virtual bool on_message(Message &msg);
+	virtual bool on_message(Message &msg, Message &out)=0; //process the message;
 
 protected:
 	std::string hostname;

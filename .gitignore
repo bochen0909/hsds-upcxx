@@ -34,6 +34,7 @@
 .cproject
 .project
 .settings
-build
+build/
+build2/
 .pydevproject
 .ipynb_checkpoints

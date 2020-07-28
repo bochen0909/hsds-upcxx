@@ -25,7 +25,7 @@ public:
 			bool do_appending = false);
 	virtual ~KmerCountingListener();
 
-	bool on_message(Message &message);
+	bool on_message(Message &message, Message &message2);
 
 protected:
 

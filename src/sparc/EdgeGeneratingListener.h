@@ -21,7 +21,7 @@ public:
 	EdgeGeneratingListener(const std::string &hostname, int port,
 			const std::string &dbpath, DBHelper::DBTYPE dbtype ) ;
 	virtual ~EdgeGeneratingListener();
-	virtual bool on_message(Message &msg);
+	bool on_message(Message &message, Message& out);
 
 };
 

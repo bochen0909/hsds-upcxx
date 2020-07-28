@@ -230,11 +230,21 @@ void test_message_compressed(void) {
 void test_message_with_string(void) {
 	{
 		Message msg(true);
-		msg << "ABC" << "CDE";
-		std::string a, b;
-		msg >> a >> b;
-		TEST_STR_EQUAL("ABC", a);
-		TEST_STR_EQUAL("CDE", b);
+		char *longa =
+				"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+		const char *longb = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
+
+		const string longc = "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC";
+		string longd =
+				"DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD";
+		msg << longa << longb << longc << longd;
+
+		std::string a, b, c, d;
+		msg >> a >> b >> c >> d;
+		TEST_STR_EQUAL(longa, a);
+		TEST_STR_EQUAL(longb, b);
+		TEST_STR_EQUAL(longc, c);
+		TEST_STR_EQUAL(longd, d);
 	}
 
 	{
@@ -247,6 +257,124 @@ void test_message_with_string(void) {
 	}
 }
 
+void test_message_with_bytes(void) {
+	int a = -123;
+	size_t b = 321;
+	uint32_t c = 231;
+	float d = -1.23;
+	double e = 2.3445;
+	bool f = true;
+	char* longa="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+	{
+		void *p;
+		size_t len;
+		{
+			Message msg;
+
+			msg << "ABC" << "CDE" << a << b << c << d << e << f;
+			p = msg.to_bytes(len);
+		}
+		{
+
+			int a2;
+			size_t b2;
+			uint32_t c2;
+			float d2;
+			double e2;
+			bool f2;
+			Message msg;
+			msg.from_bytes(p, len);
+			std::string s1, s2;
+			msg >> s1 >> s2 >> a2 >> b2 >> c2 >> d2 >> e2 >> f2;
+			TEST_STR_EQUAL("ABC", s1);
+			TEST_STR_EQUAL("CDE", s2);
+			TEST_INT_EQUAL(a, a2);
+			TEST_INT_EQUAL(b, b2);
+			TEST_INT_EQUAL(c, c2);
+
+			TEST_DOUBLE_EQUAL(d, d2);
+			TEST_DOUBLE_EQUAL(e, e2);
+
+			TEST_CHECK(f == f2);
+		}
+		free(p);
+	}
+
+	{
+			void *p;
+			size_t len;
+			{
+				Message msg(true);
+				msg << longa << "CDE" << a << b << c << d << e << f;
+				p = msg.to_bytes(len);
+			}
+
+			{
+
+				int a2;
+				size_t b2;
+				uint32_t c2;
+				float d2;
+				double e2;
+				bool f2;
+				Message msg;
+				msg.from_bytes(p, len);
+				std::string s1, s2;
+				msg >> s1 >> s2 >> a2 >> b2 >> c2 >> d2 >> e2 >> f2;
+				TEST_STR_EQUAL(longa, s1);
+				TEST_STR_EQUAL("CDE", s2);
+				TEST_INT_EQUAL(a, a2);
+				TEST_INT_EQUAL(b, b2);
+				TEST_INT_EQUAL(c, c2);
+
+				TEST_DOUBLE_EQUAL(d, d2);
+				TEST_DOUBLE_EQUAL(e, e2);
+
+				TEST_CHECK(f == f2);
+			}
+			free(p);
+		}
+
+}
+
+void test_message_with_bytes2(void) {
+
+	int8_t a=2;
+	size_t b=3;
+	uint32_t c = 1;
+	uint32_t d = 2;
+	uint32_t e = 3;
+	{
+		void *p;
+		size_t len;
+		{
+			Message msg;
+
+			msg << a << b << c << d <<e;
+			p = msg.to_bytes(len);
+		}
+		{
+
+			int8_t a2;
+			size_t b2;
+			uint32_t c2;
+			uint32_t d2;
+			uint32_t e2;
+			Message msg;
+			msg.from_bytes(p, len);
+			msg >> a2 >> b2 >> c2 >> d2 >> e2 ;
+			TEST_INT_EQUAL(a, a2);
+			TEST_INT_EQUAL(b, b2);
+			TEST_INT_EQUAL(c, c2);
+			TEST_INT_EQUAL(d, d2);
+			TEST_INT_EQUAL(e, e2);
+		}
+		free(p);
+	}
+
+}
+
+
 TEST_LIST = { {"test_LZ4String", test_LZ4String},
 
 	{	"test_LZ4String_and_zmq_message", test_LZ4String_and_zmq_message},
@@ -256,6 +384,11 @@ TEST_LIST = { {"test_LZ4String", test_LZ4String},
 	{	"test_message_compressed",test_message_compressed},
 
 	{	"test_message_with_string",test_message_with_string},
+
+	{	"test_message_with_bytes",test_message_with_bytes},
+
+	{	"test_message_with_bytes2",test_message_with_bytes},
+
 
 	{	NULL, NULL}};
 

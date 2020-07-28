@@ -49,10 +49,17 @@ bool ZMQListener::recv(Message &msg) {
 	}
 
 }
-void ZMQListener::send(const Message &msg) {
+void ZMQListener::send(Message &msg) {
 	zmqpp::message message;
 	message << msg;
 	socket->send(message);
 
+}
+
+bool ZMQListener::on_message(Message &msg){
+	Message out(need_compress_message());
+	on_message(msg,out);
+	send(out);
+	return true;
 }
 

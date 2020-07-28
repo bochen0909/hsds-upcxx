@@ -19,7 +19,7 @@ public:
 
 	virtual int start();
 	virtual int stop();
-	virtual void send(size_t rank, const Message &msg);
+	virtual void send(size_t rank, Message &msg);
 	virtual void recv(size_t rank, Message &msg);
 
 protected:

@@ -26,11 +26,11 @@ LPAClient::LPAClient(const std::vector<int> &peers_ports,
 		const std::vector<int> &hash_rank_mapping, size_t smin, bool weighted,
 		int rank) :
 #ifdef USE_MPICLIENT
-		MPIClient(hash_rank_mapping)
+		MPIClient(rank, hash_rank_mapping)
 #else
-		ZMQClient(peers_ports, peers_hosts, hash_rank_mapping)
+				ZMQClient(peers_ports, peers_hosts, hash_rank_mapping)
 #endif
-		, state(smin), weighted(weighted), rank(rank) {
+						, state(smin), weighted(weighted), rank(rank) {
 }
 
 NodeCollection* LPAClient::getNode() {
@@ -46,27 +46,33 @@ void LPAClient::do_query_and_update_nodes(const std::vector<uint32_t> &nodes,
 		std::vector<uint32_t> values(kv.second.begin(), kv.second.end());
 		//zmqpp::socket *socket = peers[rank];
 		Message msg(b_compress_message);
-		msg << LPAV1_QUERY_LABELS<<  values.size();
+		msg << LPAV1_QUERY_LABELS << values.size();
 		for (size_t i = 0; i < values.size(); i++) {
 			msg << values.at(i);
 		}
 
-		//zmqpp::message message;
-		//(*this)<< LPAV1_QUERY_LABELS << msg;
-		//socket->send(message);
+		auto lambda = [&labels, &values](Message &msg2) {
+
+			size_t N;
+			msg2 >> N;
+			assert(N == values.size());
+			for (size_t i = 0; i < values.size(); i++) {
+				uint32_t label;
+				msg2 >> label;
+				labels[values.at(i)] = label;
+			}
+		};
+
+#ifdef USE_MPICLIENT
+		std::function<void(Message&)> fun(lambda);
+		this->send(rank,msg,fun);
+#else
 		this->send(rank, msg);
-		//zmqpp::message message2;
-		//socket->receive(message2);
-		Message msg2;
-		this->recv(rank, msg2);
-		size_t N;
-		msg2 >> N;
-		assert(N == values.size());
-		for (size_t i = 0; i < values.size(); i++) {
-			uint32_t label;
-			msg2 >> label;
-			labels[values.at(i)] = label;
-		}
+		Message message2;
+		this->recv(rank, message2);
+		lambda(message2);
+#endif
+
 	}
 
 	//update local
@@ -124,7 +130,6 @@ void LPAClient::query_and_update_nodes() {
 
 void LPAClient::notify_changed_nodes() {
 
-
 	auto &edges = state.get_edges();
 	std::unordered_map<uint32_t, std::unordered_set<uint32_t>> requests;
 	for (NodeCollection::iterator itor = edges.begin(); itor != edges.end();
@@ -141,7 +146,6 @@ void LPAClient::notify_changed_nodes() {
 
 	for (auto &kv : requests) {
 		uint32_t rank = kv.first;
-		//zmqpp::socket *socket = peers[rank];
 
 		Message mymsg(b_compress_message);
 
@@ -149,21 +153,24 @@ void LPAClient::notify_changed_nodes() {
 		for (uint32_t node : kv.second) {
 			mymsg << node;
 		}
-		//zmqpp::message message;
-		//message << LPAV1_UPDATE_CHANGED << mymsg;
-		//socket->send(message);
-		this->send(rank,mymsg);
-		//zmqpp::message message2;
-		//socket->receive(message2);
+		auto lambda = [](Message &message2) {
+			std::string reply;
+			message2 >> reply;
+			if (reply != "OK") {
+				myerror("get reply failed");
+			}
+		};
+
+#ifdef USE_MPICLIENT
+		std::function<void(Message& message2)> fun(lambda);
+		this->send(rank,mymsg,fun);
+#else
+		this->send(rank, mymsg);
 		Message message2;
 		this->recv(rank, message2);
-		std::string reply;
-		message2 >> reply;
-		if (reply != "OK") {
-			myerror("get reply failed");
-		}
+		lambda(message2);
+#endif
 	}
-
 }
 
 void LPAClient::send_edge(std::vector<uint32_t> &from,
@@ -182,7 +189,6 @@ void LPAClient::send_edge(std::vector<uint32_t> &from,
 	for (auto &kv : request) {
 		uint32_t rank = kv.first;
 		const auto &v = kv.second;
-		//zmqpp::socket *socket = peers[rank];
 
 		Message mymsg(b_compress_message);
 		mymsg << LPAV1_INIT_GRAPH << v.size();
@@ -195,21 +201,23 @@ void LPAClient::send_edge(std::vector<uint32_t> &from,
 			n_send++;
 		}
 
-		//zmqpp::message message;
-		//message << LPAV1_INIT_GRAPH << mymsg;
-		//socket->send(message);
-		this->send(rank,mymsg);
+		auto lambda = [](Message &message2) {
+			std::string reply;
+			message2 >> reply;
+			if (reply != "OK") {
+				myerror("get reply failed");
+			}
+		};
 
-		//zmqpp::message message2;
-		//socket->receive(message2);
+#ifdef USE_MPICLIENT
+		std::function<void(Message&)> fun(lambda);
+		this->send(rank,mymsg,fun);
+#else
+		this->send(rank, mymsg);
 		Message message2;
-		this->recv(rank,message2);
-		std::string reply;
-		message2 >> reply;
-		if (reply != "OK") {
-			myerror("get reply failed");
-		}
-
+		this->recv(rank, message2);
+		lambda(message2);
+#endif
 	}
 
 }

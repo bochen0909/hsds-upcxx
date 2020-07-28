@@ -83,7 +83,7 @@ int ZMQClient::start() {
 	return 0;
 }
 
-void ZMQClient::send(size_t rank, const Message &msg) {
+void ZMQClient::send(size_t rank, Message &msg) {
 	zmqpp::socket *socket = peers[rank];
 	zmqpp::message message;
 	message << msg;

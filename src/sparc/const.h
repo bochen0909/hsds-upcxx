@@ -13,7 +13,8 @@ static int8_t LPAV1_UPDATE_CHANGED = 1;
 static int8_t LPAV1_INIT_GRAPH= 2;
 static int8_t LPAV1_QUERY_LABELS = 3;
 
-
+#define MPI_CLIENT_MSG_TAG 1
+#define MPI_LISTENER_MSG_TAG 2
 
 
 

@@ -35,7 +35,8 @@ EdgeGeneratingListener::EdgeGeneratingListener(const std::string &hostname,
 EdgeGeneratingListener::~EdgeGeneratingListener() {
 }
 
-bool EdgeGeneratingListener::on_message(Message &message) {
+
+bool EdgeGeneratingListener::on_message(Message &message, Message& out) {
 	size_t N;
 	message >> N;
 	for (size_t i = 0; i < N; i++) {
@@ -43,8 +44,6 @@ bool EdgeGeneratingListener::on_message(Message &message) {
 		message >> edge;
 		dbhelper->incr(edge);
 	}
-	Message message2;
-	message2 << "OK";
-	send(message2);
+	out<< "OK";
 	return true;
 }

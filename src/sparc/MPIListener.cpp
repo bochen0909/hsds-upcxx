@@ -29,9 +29,9 @@ bool MPIListener::recv(Message &msg) {
 	//ref to https://www.mcs.anl.gov/research/projects/mpi/tutorial/gropp/node93.html#Node93
 
 	static int from_rank = 0;
-	bool recved = false;
 	int rank_tag = (rank + 1) * 1000 + 1;
-	for (int n = 0; n < world_size; n++) {
+	for (int n = 0; n < world_size;
+			n++, from_rank = (from_rank + 1) % world_size) {
 		int flag;
 		MPI_Status status;
 		MPI_Iprobe(from_rank, rank_tag, MPI_COMM_WORLD, &flag, &status);
@@ -68,31 +68,24 @@ bool MPIListener::recv(Message &msg) {
 				msg.from_bytes(buf, number_amount);
 				msg.rank = status.MPI_SOURCE;
 				msg.tag = status.MPI_TAG;
-				recved = true;
 				free(buf);
 				//myerror("MPIListener::recv from %d n=%d %s", msg.rank, number_amount, msg.to_string().c_str());
 
-				if (++from_rank >= world_size) {
-					from_rank = 0;
-				}
-				break;
+				return true;
 			}
 		} else {
 			//no message received
-			if (++from_rank >= world_size) {
-				from_rank = 0;
-			}
 		}
 
 	}
-	if (!recved) {
+	if (true) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		this->n_sleep++;
 		if (rank % 10 == 0 && n_sleep % 1000 == 0) {
 			myinfo("recv sleep count = %ld", n_sleep);
 		}
 	}
-	return recved;
+	return false;
 }
 void MPIListener::send(Message &msg) {
 	if (msg.rank < 0) {

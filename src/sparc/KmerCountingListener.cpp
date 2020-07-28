@@ -57,7 +57,7 @@ bool KmerCountingListener::on_message(Message &message, Message &message2) {
 		}
 		n_recv++;
 #ifdef USE_MPICLIENT
-		if (rank % 10 == 0 && n_recv % 1000000 == 0) {
+		if (n_recv % 1000000 == 0) {
 			myinfo("Recved %ld records", n_recv);
 		}
 #endif

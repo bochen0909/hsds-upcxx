@@ -63,7 +63,7 @@ template<typename V> void KmerCountingClient::send_kmers(
 					message << it->second.at(i) << v.at(i);
 					++n_send;
 #ifdef USE_MPICLIENT
-		if (rank % 10 == 0 && n_send % 1000000 == 0) {
+		if (n_send % 1000000 == 0) {
 			myinfo("sent %ld records", n_send);
 		}
 #endif
@@ -73,7 +73,7 @@ template<typename V> void KmerCountingClient::send_kmers(
 					message << it->second.at(i);
 					++n_send;
 #ifdef USE_MPICLIENT
-		if (rank % 10 == 0 && n_send % 1000000 == 0) {
+		if (n_send % 1000000 == 0) {
 			myinfo("sent %ld records", n_send);
 		}
 #endif

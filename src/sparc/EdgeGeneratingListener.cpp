@@ -36,7 +36,12 @@ EdgeGeneratingListener::EdgeGeneratingListener(int rank, int world_size,
 EdgeGeneratingListener::~EdgeGeneratingListener() {
 }
 
-bool EdgeGeneratingListener::on_message(Message &message, Message &out) {
+bool EdgeGeneratingListener::on_message(Message &message, Message &message2) {
+#ifdef USE_MPICLIENT
+	message2.rank=message.rank;
+	message2.tag=message.tag;
+#endif
+
 	size_t N;
 	message >> N;
 	for (size_t i = 0; i < N; i++) {
@@ -44,6 +49,6 @@ bool EdgeGeneratingListener::on_message(Message &message, Message &out) {
 		message >> edge;
 		dbhelper->incr(edge);
 	}
-	out << "OK";
+	message2 << "OK";
 	return true;
 }

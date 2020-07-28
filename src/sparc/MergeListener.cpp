@@ -33,6 +33,11 @@ MergeListener::~MergeListener() {
 }
 
 bool MergeListener::on_message(Message &message, Message &message2) {
+#ifdef USE_MPICLIENT
+	message2.rank=message.rank;
+	message2.tag=message.tag;
+#endif
+
 	size_t N;
 	message >> N;
 	for (size_t i = 0; i < N; i++) {

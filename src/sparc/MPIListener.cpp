@@ -84,6 +84,10 @@ bool MPIListener::recv(Message &msg) {
 	}
 	if (!recved) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		this->n_sleep++;
+		if (n_sleep % 1000 == 0) {
+			myinfo("recv sleep count = %ld", n_sleep);
+		}
 	}
 	return recved;
 }

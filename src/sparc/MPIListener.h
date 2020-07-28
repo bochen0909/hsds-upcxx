@@ -10,8 +10,8 @@
 #include "AbstractListener.h"
 class MPIListener: public AbstractListener {
 public:
-	MPIListener(int rank, int world_size, const std::string &dbpath, DBHelper::DBTYPE dbtype,
-			bool do_appending);
+	MPIListener(int rank, int world_size, const std::string &dbpath,
+			DBHelper::DBTYPE dbtype, bool do_appending);
 	virtual ~MPIListener();
 
 	virtual void before_thread_run();
@@ -22,10 +22,10 @@ public:
 	virtual bool on_message(Message &msg);
 	virtual bool on_message(Message &msg, Message &out)=0; //process the message;
 
-
 protected:
 	int world_size;
 	int rank;
+	size_t n_sleep = 0;
 };
 
 #endif /* SUBPROJECTS__SPARC_MPI_SRC_SPARC_MPILISTENER_H_ */

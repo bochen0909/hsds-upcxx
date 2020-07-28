@@ -35,6 +35,7 @@ struct Config: public BaseConfig {
 	int kmer_length;
 
 	void print() {
+		BaseConfig::print();
 		myinfo("config: kmer_length=%d", kmer_length);
 		myinfo("config: canonical_kmer=%d", !without_canonical_kmer ? 1 : 0);
 	}

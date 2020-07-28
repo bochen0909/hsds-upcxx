@@ -58,18 +58,17 @@ void MPIClient::sendAndReply_batch(std::vector<RequestAndReply> &rps) {
 	MPI_Request send_requests[N];
 
 	bool array_finished[N];
-	void* buff[N];
+	void *buff[N];
 	for (size_t i = 0; i < N; i++) {
 		array_finished[i] = false;
-		buff[i]=0;
+		buff[i] = 0;
 	}
-
 
 	for (size_t i = 0; i < N; i++) {
 		size_t msg_length;
 		auto &msg = *requests.at(i);
 		void *p = msg.to_bytes(msg_length);
-		buff[i]= p;
+		buff[i] = p;
 		msg.rank = ranks.at(i);
 		msg.tag = listener_tag(ranks.at(i));
 		//myerror("MPIClient::send to %d n=%d %s", msg.rank, msg_length,msg.to_string().c_str());
@@ -89,7 +88,7 @@ void MPIClient::sendAndReply_batch(std::vector<RequestAndReply> &rps) {
 		bool all_finished = true;
 
 		for (size_t i = 0; i < N; i++) {
-			{
+			if (false) {
 				MPI_Status status;
 				int index;
 				MPI_Waitany(N, send_requests, &index, &status);
@@ -134,6 +133,11 @@ void MPIClient::sendAndReply_batch(std::vector<RequestAndReply> &rps) {
 		} else {
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}
+	}
+
+	if (true) {
+		MPI_Status status[N];
+		MPI_Waitall(N, send_requests, status);
 	}
 
 	for (size_t i = 0; i < N; i++) {

@@ -30,8 +30,8 @@ bool MPIListener::recv(Message &msg) {
 
 	static int from_rank = 0;
 	bool recved = false;
+	int rank_tag = (rank + 1) * 1000 + 1;
 	for (int n = 0; n < world_size; n++) {
-		int rank_tag = (rank + 1) * 1000 + 1;
 		int flag;
 		MPI_Status status;
 		MPI_Iprobe(from_rank, rank_tag, MPI_COMM_WORLD, &flag, &status);
@@ -72,13 +72,16 @@ bool MPIListener::recv(Message &msg) {
 				free(buf);
 				//myerror("MPIListener::recv from %d n=%d %s", msg.rank, number_amount, msg.to_string().c_str());
 
+				if (++from_rank >= world_size) {
+					from_rank = 0;
+				}
 				break;
 			}
 		} else {
-			//not recev message
-		}
-		if (++from_rank >= world_size) {
-			from_rank = 0;
+			//no message received
+			if (++from_rank >= world_size) {
+				from_rank = 0;
+			}
 		}
 
 	}

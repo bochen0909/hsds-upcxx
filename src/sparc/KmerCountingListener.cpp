@@ -21,9 +21,9 @@
 
 using namespace std;
 
-KmerCountingListener::KmerCountingListener(int rank, int world_size, const std::string &hostname,
-		int port, const std::string &dbpath, DBHelper::DBTYPE dbtype,
-		bool do_appending) :
+KmerCountingListener::KmerCountingListener(int rank, int world_size,
+		const std::string &hostname, int port, const std::string &dbpath,
+		DBHelper::DBTYPE dbtype, bool do_appending) :
 #ifdef USE_MPICLIENT
 		MPIListener(rank, world_size, dbpath,dbtype,do_appending){
 #else
@@ -55,6 +55,12 @@ bool KmerCountingListener::on_message(Message &message, Message &message2) {
 			message >> kmer;
 			dbhelper->incr(kmer);
 		}
+		n_recv++;
+#ifdef USE_MPICLIENT
+		if (rank % 10 == 0 && n_recv % 1000000 == 0) {
+			myinfo("Recved %ld records", n_recv);
+		}
+#endif
 	}
 	message2 << "OK";
 	return true;

@@ -70,7 +70,7 @@ bool MPIListener::recv(Message &msg) {
 				msg.tag = status.MPI_TAG;
 				free(buf);
 				//myerror("MPIListener::recv from %d n=%d %s", msg.rank, number_amount, msg.to_string().c_str());
-
+				from_rank = (from_rank + 1) % world_size;
 				return true;
 			}
 		} else {

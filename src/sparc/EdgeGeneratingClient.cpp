@@ -61,6 +61,10 @@ void EdgeGeneratingClient::send_edges(const std::vector<string> &edges) {
 		}
 		this->send(rank, message);
 		Message message2;
+#ifdef USE_MPICLIENT
+		message2.rank = message.rank;
+		message2.tag = message.tag;
+#endif
 		this->recv(rank, message2);
 		std::string reply;
 		message2 >> reply;

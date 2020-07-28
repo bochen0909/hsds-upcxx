@@ -71,7 +71,7 @@ void MPIClient::send(size_t rank, Message &msg, MESSAGE_CALLBACK_FUN &fun) {
 void MPIClient::recv(size_t rank, Message &msg) {
 	rank = hash_rank_mapping[rank];
 	MPI_Status status;
-	int number_amount, number_amount2;
+	int number_amount;
 	assert(rank == msg.rank);
 	MPI_Probe((int) rank, msg.tag + 1, MPI_COMM_WORLD, &status);
 	MPI_Get_count(&status, MPI_BYTE, &number_amount);
@@ -82,6 +82,7 @@ void MPIClient::recv(size_t rank, Message &msg) {
 
 	uint8_t *buf = (uint8_t*) malloc(sizeof(uint8_t) * number_amount);
 	if (false) {
+		int number_amount2;
 		MPI_Recv((void*) buf, number_amount, MPI_BYTE, (int) rank,
 				status.MPI_TAG,
 				MPI_COMM_WORLD, &status);
@@ -94,7 +95,7 @@ void MPIClient::recv(size_t rank, Message &msg) {
 				status.MPI_TAG,
 				MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	}
-	msg.from_bytes(buf, number_amount2);
+	msg.from_bytes(buf, number_amount);
 	free(buf);
 	//myerror("MPIClient::recv from %d n=%d %s", msg.rank, number_amount2,msg.to_string().c_str());
 }

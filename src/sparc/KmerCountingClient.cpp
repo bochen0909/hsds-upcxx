@@ -72,6 +72,10 @@ template<typename V> void KmerCountingClient::send_kmers(
 		}
 		this->send(rank, message);
 		Message message2;
+#ifdef USE_MPICLIENT
+		message2.rank = message.rank;
+		message2.tag = message.tag;
+#endif
 		this->recv(rank, message2);
 		std::string reply;
 		message2 >> reply;

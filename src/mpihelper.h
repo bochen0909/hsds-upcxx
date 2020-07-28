@@ -210,6 +210,16 @@ std::vector<std::string> get_my_files(const std::vector<std::string> &folders,
 
 }
 
+std::string MPI_get_hostname() {
+	char buf[2048];
+	bzero(buf, 2048);
+	int name_len;
+
+	MPI_Get_processor_name(buf, &name_len);
+	return buf;
+}
+
+
 } //end namespace
 
 #endif /* SOURCE_DIRECTORY__SRC_MPIHELPER_H_ */

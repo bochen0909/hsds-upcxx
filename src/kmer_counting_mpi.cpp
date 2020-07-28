@@ -25,72 +25,21 @@
 #include "sparc/KmerCountingListener.h"
 #include "sparc/KmerCountingClient.h"
 #include "sparc/DBHelper.h"
+#include "sparc/config.h"
 #include "mpihelper.h"
 using namespace std;
 using namespace sparc;
 
-struct Config {
+struct Config: public BaseConfig {
 	bool without_canonical_kmer;
 	int kmer_length;
-	string inputpath;
-	string outputpath;
-	string scratch_dir;
-	string mpi_hostname;
-	string mpi_ipaddress;
-	int port;
-	int rank;
-	int nprocs;
-	DBHelper::DBTYPE dbtype;
-	bool zip_output;
-	std::vector<int> peers_ports;
-	std::vector<int> hash_rank_mapping;
-	std::vector<std::string> peers_hosts;
 
 	void print() {
+		BaseConfig::print();
 		myinfo("config: kmer_length=%d", kmer_length);
 		myinfo("config: canonical_kmer=%d", !without_canonical_kmer ? 1 : 0);
-		myinfo("config: zip_output=%d", zip_output ? 1 : 0);
-		myinfo("config: inputpath=%s", inputpath.c_str());
-		myinfo("config: outputpath=%s", outputpath.c_str());
-		myinfo("config: scratch_dir=%s", scratch_dir.c_str());
-		myinfo("config: dbpath=%s", get_dbpath().c_str());
-		myinfo("config: dbtype=%s",
-				dbtype == DBHelper::MEMORY_DB ?
-						"memory" :
-						(dbtype == DBHelper::LEVEL_DB ? "leveldb" : "rocksdb"));
-		myinfo("config: #procs=%d", nprocs);
 	}
-
-	std::string get_dbpath() {
-		char tmp[2048];
-		sprintf(tmp, "%s/kc_%d.db", scratch_dir.c_str(), rank);
-		return tmp;
-	}
-
-	std::string get_my_output() {
-		char tmp[2048];
-		if (zip_output) {
-			sprintf(tmp, "%s/part_%d.txt.gz", outputpath.c_str(), rank);
-		} else {
-			sprintf(tmp, "%s/part_%d.txt", outputpath.c_str(), rank);
-		}
-		return tmp;
-	}
-
-	int get_my_port() {
-		return port + rank;
-	}
-
 };
-
-string MPI_get_hostname() {
-	char buf[2048];
-	bzero(buf, 2048);
-	int name_len;
-
-	MPI_Get_processor_name(buf, &name_len);
-	return buf;
-}
 
 void check_arg(argagg::parser_results &args, char *name) {
 	if (!args[name]) {
@@ -116,6 +65,7 @@ int main(int argc, char **argv) {
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
 
 	Config config;
+	config.program = argv[0];
 	config.rank = rank;
 	config.nprocs = size;
 	config.mpi_hostname = MPI_get_hostname();
@@ -226,7 +176,7 @@ int main(int argc, char **argv) {
 
 	check_arg(args, (char*) "input");
 	string inputpath = args["input"].as<string>();
-	config.inputpath = inputpath;
+	config.inputpath.push_back(inputpath);
 	check_arg(args, (char*) "output");
 	string outputpath = args["output"].as<string>();
 	config.outputpath = outputpath;
@@ -319,8 +269,9 @@ int run(const std::vector<std::string> &input, Config &config) {
 	}
 	reshuffle_rank(config);
 	get_peers_information(config);
-	KmerCountingListener listener(config.rank,config.nprocs, config.mpi_ipaddress, config.get_my_port(),
-			config.get_dbpath(), config.dbtype);
+	KmerCountingListener listener(config.rank, config.nprocs,
+			config.mpi_ipaddress, config.get_my_port(), config.get_dbpath(),
+			config.dbtype);
 	myinfo("Starting listener");
 	int status = listener.start();
 	if (status != 0) {
@@ -331,8 +282,8 @@ int run(const std::vector<std::string> &input, Config &config) {
 	//wait for all server is ready
 	MPI_Barrier(MPI_COMM_WORLD);
 	myinfo("Starting client");
-	KmerCountingClient client(config.rank, config.peers_ports, config.peers_hosts,
-			config.hash_rank_mapping, false);
+	KmerCountingClient client(config.rank, config.peers_ports,
+			config.peers_hosts, config.hash_rank_mapping, false);
 	if (client.start() != 0) {
 		myerror("Start client failed");
 		MPI_Abort( MPI_COMM_WORLD, -1);

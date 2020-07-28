@@ -26,72 +26,19 @@
 #include "sparc/KmerCountingClient.h"
 #include "sparc/DBHelper.h"
 #include "mpihelper.h"
+#include "sparc/config.h"
 using namespace std;
 using namespace sparc;
 
-struct Config {
+struct Config: public BaseConfig {
 	bool without_canonical_kmer;
 	int kmer_length;
-	string inputpath;
-	string outputpath;
-	string scratch_dir;
-	string mpi_hostname;
-	string mpi_ipaddress;
-	int port;
-	int rank;
-	int nprocs;
-	DBHelper::DBTYPE dbtype;
-	bool zip_output;
-	std::vector<int> peers_ports;
-	std::vector<int> hash_rank_mapping;
-	std::vector<std::string> peers_hosts;
 
 	void print() {
 		myinfo("config: kmer_length=%d", kmer_length);
 		myinfo("config: canonical_kmer=%d", !without_canonical_kmer ? 1 : 0);
-		myinfo("config: zip_output=%d", zip_output ? 1 : 0);
-		myinfo("config: inputpath=%s", inputpath.c_str());
-		myinfo("config: outputpath=%s", outputpath.c_str());
-		myinfo("config: scratch_dir=%s", scratch_dir.c_str());
-		myinfo("config: dbpath=%s", get_dbpath().c_str());
-		myinfo("config: dbtype=%s",
-				dbtype == DBHelper::MEMORY_DB ?
-						"memory" :
-						(dbtype == DBHelper::LEVEL_DB ? "leveldb" : "rocksdb"));
-		myinfo("config: #procs=%d", nprocs);
 	}
-
-	std::string get_dbpath() {
-		char tmp[2048];
-		sprintf(tmp, "%s/krm_%d.db", scratch_dir.c_str(), rank);
-		return tmp;
-	}
-
-	std::string get_my_output() {
-		char tmp[2048];
-		if (zip_output) {
-			sprintf(tmp, "%s/part_%d.txt.gz", outputpath.c_str(), rank);
-		} else {
-			sprintf(tmp, "%s/part_%d.txt", outputpath.c_str(), rank);
-		}
-
-		return tmp;
-	}
-
-	int get_my_port() {
-		return port + rank;
-	}
-
 };
-
-string MPI_get_hostname() {
-	char buf[2048];
-	bzero(buf, 2048);
-	int name_len;
-
-	MPI_Get_processor_name(buf, &name_len);
-	return buf;
-}
 
 void check_arg(argagg::parser_results &args, char *name) {
 	if (!args[name]) {
@@ -117,6 +64,7 @@ int main(int argc, char **argv) {
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
 
 	Config config;
+	config.program=argv[0];
 	config.rank = rank;
 	config.nprocs = size;
 	config.mpi_hostname = MPI_get_hostname();
@@ -225,7 +173,7 @@ int main(int argc, char **argv) {
 
 	check_arg(args, (char*) "input");
 	string inputpath = args["input"].as<string>();
-	config.inputpath = inputpath;
+	config.inputpath.push_back(inputpath);
 	check_arg(args, (char*) "output");
 	string outputpath = args["output"].as<string>();
 	config.outputpath = outputpath;

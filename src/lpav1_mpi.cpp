@@ -27,74 +27,21 @@
 #include "sparc/LPAClient.h"
 #include "mpihelper.h"
 #include "sparc/LPAListener.h"
+#include "sparc/config.h"
 using namespace std;
 using namespace sparc;
 
-struct Config {
-	std::vector<string> inputpath;
-	string outputpath;
-	string scratch_dir;
-	string mpi_hostname;
-	string mpi_ipaddress;
+struct Config: public BaseConfig {
 	int n_iteration;
-	int port;
-	int rank;
 	int smin;
-	int nprocs;
-	DBHelper::DBTYPE dbtype;
-	bool zip_output;
 	bool weighted;
-	std::vector<int> peers_ports;
-	std::vector<int> hash_rank_mapping;
-	std::vector<std::string> peers_hosts;
 
 	void print() {
+		BaseConfig::print();
 		myinfo("config: smin=%d", smin);
-		myinfo("config: type=%s", weighted ? "weighted" : "unweighted");
 		myinfo("config: n_iteration=%d", n_iteration);
-		myinfo("config: zip_output=%d", zip_output ? 1 : 0);
-		for (size_t i = 0; i < inputpath.size(); i++) {
-			myinfo("config: inputpath[%d]=%s", i, inputpath.at(i).c_str());
-		}
-		myinfo("config: outputpath=%s", outputpath.c_str());
-		myinfo("config: scratch_dir=%s", scratch_dir.c_str());
-		myinfo("config: dbtype=%s",
-				dbtype == DBHelper::MEMORY_DB ?
-						"memory" :
-						(dbtype == DBHelper::LEVEL_DB ? "leveldb" : "rocksdb"));
-		myinfo("config: #procs=%d", nprocs);
-	}
-
-	std::string get_dbpath(int h) {
-		char tmp[2048];
-		sprintf(tmp, "%s/part_h%d_r%d.db", scratch_dir.c_str(), h, rank);
-		return tmp;
-	}
-
-	std::string get_my_output(int h) {
-		char tmp[2048];
-		if (zip_output) {
-			sprintf(tmp, "%s/part_h%d_r%d.txt.gz", outputpath.c_str(), h, rank);
-		} else {
-			sprintf(tmp, "%s/part_h%d_r%d.txt", outputpath.c_str(), h, rank);
-		}
-		return tmp;
-	}
-
-	int get_my_port(int h) {
-		return port + h * nprocs + rank;
-	}
-
+ 	}
 };
-
-string MPI_get_hostname() {
-	char buf[2048];
-	bzero(buf, 2048);
-	int name_len;
-
-	MPI_Get_processor_name(buf, &name_len);
-	return buf;
-}
 
 void check_arg(argagg::parser_results &args, char *name) {
 	if (!args[name]) {
@@ -120,6 +67,7 @@ int main(int argc, char **argv) {
 	MPI_Comm_size(MPI_COMM_WORLD, &size);
 
 	Config config;
+	config.program=argv[0];
 	config.rank = rank;
 	config.nprocs = size;
 	config.mpi_hostname = MPI_get_hostname();

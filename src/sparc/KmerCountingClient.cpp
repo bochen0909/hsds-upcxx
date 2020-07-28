@@ -19,11 +19,11 @@
 using namespace std;
 using namespace sparc;
 
-KmerCountingClient::KmerCountingClient(const std::vector<int> &peers_ports,
+KmerCountingClient::KmerCountingClient(int rank, const std::vector<int> &peers_ports,
 		const std::vector<std::string> &peers_hosts,
 		const std::vector<int> &hash_rank_mapping, bool do_appending) :
 #ifdef USE_MPICLIENT
-		MPIClient(hash_rank_mapping,do_appending),
+		MPIClient(rank, hash_rank_mapping),
 #else
 				ZMQClient(peers_ports, peers_hosts, hash_rank_mapping),
 #endif
@@ -37,7 +37,6 @@ template<typename V> void KmerCountingClient::send_kmers(
 		const std::vector<string> &kmers, const std::vector<V> &nodeids) {
 	std::map<size_t, std::vector<string>> kmermap;
 	std::map<size_t, std::vector<V>> nodeidmap;
-	size_t npeers = peers.size();
 	for (size_t i = 0; i < kmers.size(); i++) {
 		const string &s = kmers.at(i);
 		//size_t k = hash_string(s) % npeers;

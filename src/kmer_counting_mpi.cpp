@@ -314,7 +314,7 @@ int run(const std::vector<std::string> &input, Config &config) {
 	}
 	reshuffle_rank(config);
 	get_peers_information(config);
-	KmerCountingListener listener(config.mpi_ipaddress, config.get_my_port(),
+	KmerCountingListener listener(config.rank,config.nprocs, config.mpi_ipaddress, config.get_my_port(),
 			config.get_dbpath(), config.dbtype);
 	myinfo("Starting listener");
 	int status = listener.start();
@@ -326,7 +326,7 @@ int run(const std::vector<std::string> &input, Config &config) {
 	//wait for all server is ready
 	MPI_Barrier(MPI_COMM_WORLD);
 	myinfo("Starting client");
-	KmerCountingClient client(config.peers_ports, config.peers_hosts,
+	KmerCountingClient client(config.rank, config.peers_ports, config.peers_hosts,
 			config.hash_rank_mapping, false);
 	if (client.start() != 0) {
 		myerror("Start client failed");

@@ -11,7 +11,7 @@
 #include "KmerCountingClient.h"
 class MergeClient: public KmerCountingClient {
 public:
-	MergeClient(const std::vector<int> &peers_ports,
+	MergeClient(int rank, const std::vector<int> &peers_ports,
 			const std::vector<std::string> &peers_hosts,
 			const std::vector<int> &hash_rank_mapping);
 	virtual ~MergeClient();

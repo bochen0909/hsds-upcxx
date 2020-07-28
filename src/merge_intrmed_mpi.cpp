@@ -348,9 +348,9 @@ int run(int bucket, const std::vector<std::string> &input, Config &config) {
 		config.print();
 	}
 	get_peers_information(bucket, config);
-	MergeListener listener(config.mpi_ipaddress, config.get_my_port(bucket),
-			config.get_dbpath(bucket), config.dbtype,
-			config.append_merge/*similar as kr mapping*/);
+	MergeListener listener(config.rank, config.nprocs, config.mpi_ipaddress,
+			config.get_my_port(bucket), config.get_dbpath(bucket),
+			config.dbtype, config.append_merge/*similar as kr mapping*/);
 	if (config.rank == 0) {
 		myinfo("Starting listener");
 	}
@@ -366,7 +366,7 @@ int run(int bucket, const std::vector<std::string> &input, Config &config) {
 	if (config.rank == 0) {
 		myinfo("Starting client");
 	}
-	MergeClient client(config.peers_ports, config.peers_hosts,
+	MergeClient client(config.rank, config.peers_ports, config.peers_hosts,
 			config.hash_rank_mapping);
 	if (client.start() != 0) {
 		myerror("Start client failed");

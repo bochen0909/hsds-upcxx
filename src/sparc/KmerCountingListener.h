@@ -20,7 +20,7 @@ class KmerCountingListener: public ZMQListener {
 #endif
 
 public:
-	KmerCountingListener(const std::string &hostname, int port,
+	KmerCountingListener(int rank, int world_size, const std::string &hostname, int port,
 			const std::string &dbpath, DBHelper::DBTYPE dbtype,
 			bool do_appending = false);
 	virtual ~KmerCountingListener();

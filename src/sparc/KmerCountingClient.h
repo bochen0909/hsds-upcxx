@@ -21,7 +21,7 @@ class KmerCountingClient:public MPIClient {
 class KmerCountingClient:public ZMQClient {
 #endif
 public:
-	KmerCountingClient(const std::vector<int> &peers_ports,
+	KmerCountingClient(int rank, const std::vector<int> &peers_ports,
 			const std::vector<std::string> &peers_hosts,const std::vector<int> &hash_rank_mapping, bool do_appending);
 	virtual ~KmerCountingClient();
 

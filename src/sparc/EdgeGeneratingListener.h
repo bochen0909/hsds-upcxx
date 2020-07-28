@@ -8,7 +8,6 @@
 #ifndef SUBPROJECTS__SPARC_MPI_SRC_SPARC_EDGEGENERATINGLISTENER_H_
 #define SUBPROJECTS__SPARC_MPI_SRC_SPARC_EDGEGENERATINGLISTENER_H_
 
-
 #ifdef USE_MPICLIENT
 #include "MPIListener.h"
 class EdgeGeneratingListener: public MPIListener {
@@ -18,10 +17,11 @@ class EdgeGeneratingListener: public ZMQListener {
 #endif
 
 public:
-	EdgeGeneratingListener(const std::string &hostname, int port,
-			const std::string &dbpath, DBHelper::DBTYPE dbtype ) ;
+	EdgeGeneratingListener(int rank, int world_size,
+			const std::string &hostname, int port, const std::string &dbpath,
+			DBHelper::DBTYPE dbtype);
 	virtual ~EdgeGeneratingListener();
-	bool on_message(Message &message, Message& out);
+	bool on_message(Message &message, Message &out);
 
 };
 

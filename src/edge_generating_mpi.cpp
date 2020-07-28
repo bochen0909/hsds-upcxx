@@ -333,7 +333,8 @@ void reshuffle_rank(Config &config) {
 int run(int iteration, const std::vector<std::string> &input, Config &config) {
 
 	get_peers_information(iteration, config);
-	EdgeGeneratingListener listener(config.mpi_ipaddress, config.get_my_port(iteration),
+	EdgeGeneratingListener listener(config.rank, config.nprocs,
+			config.mpi_ipaddress, config.get_my_port(iteration),
 			config.get_dbpath(), config.dbtype);
 	myinfo("Starting listener");
 	int status = listener.start();
@@ -345,8 +346,8 @@ int run(int iteration, const std::vector<std::string> &input, Config &config) {
 	//wait for all server is ready
 	MPI_Barrier(MPI_COMM_WORLD);
 	myinfo("Starting client");
-	EdgeGeneratingClient client(config.peers_ports, config.peers_hosts,
-			config.hash_rank_mapping);
+	EdgeGeneratingClient client(config.rank, config.peers_ports,
+			config.peers_hosts, config.hash_rank_mapping);
 	if (client.start() != 0) {
 		myerror("Start client failed");
 		MPI_Abort( MPI_COMM_WORLD, -1);

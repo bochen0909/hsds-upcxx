@@ -19,7 +19,7 @@ class EdgeGeneratingClient:public MPIClient {
 class EdgeGeneratingClient: public ZMQClient {
 #endif
 public:
-	EdgeGeneratingClient(const std::vector<int> &peers_ports,
+	EdgeGeneratingClient(int rank, const std::vector<int> &peers_ports,
 			const std::vector<std::string> &peers_hosts,
 			const std::vector<int> &hash_rank_mapping);
 	virtual ~EdgeGeneratingClient();

@@ -12,7 +12,7 @@
 
 class MergeListener: public KmerCountingListener {
 public:
-	MergeListener(const std::string &hostname, int port,
+	MergeListener(int rank, int world_size, const std::string &hostname, int port,
 			const std::string &dbpath, DBHelper::DBTYPE dbtype,
 			bool merge_append);
 	virtual ~MergeListener();

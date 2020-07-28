@@ -21,15 +21,16 @@
 
 using namespace std;
 
-MergeListener::MergeListener(const std::string &hostname, int port,
-		const std::string &dbpath, DBHelper::DBTYPE dbtype, bool merge_append) :
-		KmerCountingListener(hostname, port, dbpath, dbtype, merge_append) {
+MergeListener::MergeListener(int rank, int world_size,
+		const std::string &hostname, int port, const std::string &dbpath,
+		DBHelper::DBTYPE dbtype, bool merge_append) :
+		KmerCountingListener(rank, world_size, hostname, port, dbpath, dbtype,
+				merge_append) {
 
 }
 
 MergeListener::~MergeListener() {
 }
-
 
 bool MergeListener::on_message(Message &message, Message &message2) {
 	size_t N;

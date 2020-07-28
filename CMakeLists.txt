@@ -350,7 +350,7 @@ if(BUILD_SPARC_MIMIR)
 	foreach(EXEC kmer_counting_mpi kmer_read_mapping_mpi edge_generating_mpi merge_intrmed_mpi lpav1_mpi)
 		if(BUILD_WITH_MPIClient)
 			target_sources(${EXEC} PRIVATE src/sparc/MPIClient.cpp src/sparc/MPIListener.cpp)
-			set_target_properties(${EXEC} PROPERTIES COMPILE_FLAGS "-DUSE_MPICLIENT")
+			target_compile_definitions(${EXEC} PUBLIC "-DUSE_MPICLIENT")
 		else()
 			target_sources( ${EXEC} PRIVATE src/sparc/ZMQClient.cpp src/sparc/ZMQListener.cpp )
 		endif()
@@ -370,7 +370,8 @@ if(BUILD_SPARC_MIMIR)
 	endforeach(EXEC)
 	
 	#some specials
-	set_target_properties(merge_intrmed_mpi PROPERTIES COMPILE_FLAGS "-DUSE_TSL_ROBIN_MAP")
+	#set_target_properties(merge_intrmed_mpi PROPERTIES COMPILE_OPTIONS -DUSE_TSL_ROBIN_MAP )
+	target_compile_definitions(merge_intrmed_mpi PUBLIC "-DUSE_TSL_ROBIN_MAP")
 	add_dependencies(merge_intrmed_mpi tsl_robin_map_lib)
 	
 	

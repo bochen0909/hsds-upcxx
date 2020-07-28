@@ -18,10 +18,10 @@ using namespace sparc;
 
 #define KMER_SEND_BATCH_SIZE (100*1000)
 
-MergeClient::MergeClient(const std::vector<int> &peers_ports,
+MergeClient::MergeClient(int rank, const std::vector<int> &peers_ports,
 		const std::vector<std::string> &peers_hosts,
 		const std::vector<int> &hash_rank_mapping) :
-		KmerCountingClient(peers_ports, peers_hosts, hash_rank_mapping, true) {
+		KmerCountingClient(rank, peers_ports, peers_hosts, hash_rank_mapping, true) {
 }
 
 MergeClient::~MergeClient() {

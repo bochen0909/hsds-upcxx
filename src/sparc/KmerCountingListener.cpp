@@ -21,11 +21,11 @@
 
 using namespace std;
 
-KmerCountingListener::KmerCountingListener(const std::string &hostname,
+KmerCountingListener::KmerCountingListener(int rank, int world_size, const std::string &hostname,
 		int port, const std::string &dbpath, DBHelper::DBTYPE dbtype,
 		bool do_appending) :
 #ifdef USE_MPICLIENT
-		MPIListener(dbpath,dbtype,do_appending){
+		MPIListener(rank, world_size, dbpath,dbtype,do_appending){
 #else
 				ZMQListener(hostname, port, dbpath, dbtype, do_appending) {
 #endif

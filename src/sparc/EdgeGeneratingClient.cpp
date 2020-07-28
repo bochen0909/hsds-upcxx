@@ -20,11 +20,12 @@
 using namespace std;
 using namespace sparc;
 
-EdgeGeneratingClient::EdgeGeneratingClient(const std::vector<int> &peers_ports,
+EdgeGeneratingClient::EdgeGeneratingClient(int rank,
+		const std::vector<int> &peers_ports,
 		const std::vector<std::string> &peers_hosts,
 		const std::vector<int> &hash_rank_mapping) :
 #ifdef USE_MPICLIENT
-		MPIClient(hash_rank_mapping)
+		MPIClient(rank, hash_rank_mapping)
 #else
 				ZMQClient(peers_ports, peers_hosts, hash_rank_mapping)
 #endif
@@ -37,7 +38,7 @@ EdgeGeneratingClient::~EdgeGeneratingClient() {
 void EdgeGeneratingClient::send_edges(const std::vector<string> &edges) {
 	std::map<size_t, std::vector<string>> kmermap;
 	std::map<size_t, std::vector<uint32_t>> nodeidmap;
-	size_t npeers = peers.size();
+
 	for (size_t i = 0; i < edges.size(); i++) {
 		const string &s = edges.at(i);
 		size_t k = fnv_hash(s) % npeers;

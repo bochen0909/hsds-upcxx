@@ -19,7 +19,8 @@
 using namespace std;
 using namespace sparc;
 
-KmerCountingClient::KmerCountingClient(int rank, const std::vector<int> &peers_ports,
+KmerCountingClient::KmerCountingClient(int rank,
+		const std::vector<int> &peers_ports,
 		const std::vector<std::string> &peers_hosts,
 		const std::vector<int> &hash_rank_mapping, bool do_appending) :
 #ifdef USE_MPICLIENT
@@ -32,8 +33,72 @@ KmerCountingClient::KmerCountingClient(int rank, const std::vector<int> &peers_p
 
 KmerCountingClient::~KmerCountingClient() {
 }
-
 template<typename V> void KmerCountingClient::send_kmers(
+		const std::vector<string> &kmers, const std::vector<V> &nodeids) {
+	//send_kmers_seq(kmers,nodeids);
+	std::map<size_t, std::vector<string>> kmermap;
+	std::map<size_t, std::vector<V>> nodeidmap;
+	for (size_t i = 0; i < kmers.size(); i++) {
+		const string &s = kmers.at(i);
+		size_t k = fnv_hash(s) % npeers;
+		k = hash_rank_mapping[k];
+		kmermap[k].push_back(s);
+		if (do_appending) {
+			nodeidmap[k].push_back(nodeids.at(i));
+		}
+	}
+	std::vector<RequestAndReply> rps;
+	for (std::map<size_t, std::vector<string>>::iterator it = kmermap.begin();
+			it != kmermap.end(); it++) {
+		auto message_ptr = std::shared_ptr<Message>(
+				new Message(need_compress_message()));
+		Message &message = *message_ptr;
+		size_t rank = it->first;
+		if (true) {
+
+			size_t N = it->second.size();
+			message << N;
+
+			if (do_appending) {
+				std::vector<V> &v = nodeidmap.at(it->first);
+				for (size_t i = 0; i < N; i++) {
+					message << it->second.at(i) << v.at(i);
+					++n_send;
+#ifdef USE_MPICLIENT
+		if (n_send % 1000000 == 0) {
+			myinfo("sent %ld records", n_send);
+		}
+#endif
+				}
+			} else {
+				for (size_t i = 0; i < N; i++) {
+					message << it->second.at(i);
+					++n_send;
+#ifdef USE_MPICLIENT
+		if (n_send % 1000000 == 0) {
+			myinfo("sent %ld records", n_send);
+		}
+#endif
+				}
+			}
+		}
+		rps.push_back( { rank, message_ptr });
+	}
+
+	this->sendAndReply(rps);
+	for (auto &rp : rps) {
+		Message &message2 = *rp.reply;
+		std::string reply;
+		message2 >> reply;
+		if (reply != "OK") {
+			myerror("get reply failed");
+		}
+
+	}
+
+}
+
+template<typename V> void KmerCountingClient::send_kmers_seq(
 		const std::vector<string> &kmers, const std::vector<V> &nodeids) {
 	std::map<size_t, std::vector<string>> kmermap;
 	std::map<size_t, std::vector<V>> nodeidmap;
@@ -50,7 +115,7 @@ template<typename V> void KmerCountingClient::send_kmers(
 
 	for (std::map<size_t, std::vector<string>>::iterator it = kmermap.begin();
 			it != kmermap.end(); it++) {
-		Message message;
+		Message message(need_compress_message());
 		size_t rank = it->first;
 		if (true) {
 
@@ -161,4 +226,10 @@ template void KmerCountingClient::send_kmers(const std::vector<string>&,
 		const std::vector<size_t>&);
 
 template void KmerCountingClient::send_kmers(const std::vector<string>&,
+		const std::vector<std::string>&);
+
+template void KmerCountingClient::send_kmers_seq(const std::vector<string>&,
+		const std::vector<size_t>&);
+
+template void KmerCountingClient::send_kmers_seq(const std::vector<string>&,
 		const std::vector<std::string>&);

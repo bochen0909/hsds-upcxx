@@ -10,10 +10,21 @@
 
 #include <stdint.h>
 #include <vector>
+#include <memory>
 #include "Message.h"
 
 //typedef void* (*MESSAGE_CALLBACK_FUN)(Message&);
 typedef std::function<void(Message&)> MESSAGE_CALLBACK_FUN;
+
+struct RequestAndReply {
+	RequestAndReply(size_t rank, std::shared_ptr<Message> req) {
+		this->rank = rank;
+		this->request=req;
+	}
+	size_t rank;
+	std::shared_ptr<Message> request;
+	std::shared_ptr<Message> reply;
+};
 
 class AbstractClient {
 public:
@@ -28,6 +39,8 @@ public:
 	virtual void send(size_t rank, Message &msg, MESSAGE_CALLBACK_FUN &fun);
 	virtual void recv(size_t rank, Message &msg)=0;
 
+	virtual void sendAndReply(std::vector<RequestAndReply> &rps);
+	bool need_compress_message();
 protected:
 
 protected:

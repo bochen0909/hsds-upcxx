@@ -35,6 +35,8 @@ protected:
 			std::vector<uint32_t> &nodeids);
 	template<typename V> void send_kmers(const std::vector<std::string> &kmers,
 			const std::vector<V> &nodeids);
+	template<typename V> void send_kmers_seq(const std::vector<std::string> &kmers,
+				const std::vector<V> &nodeids);
 
 protected:
 	bool do_appending;

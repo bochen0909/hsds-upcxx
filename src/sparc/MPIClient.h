@@ -24,6 +24,10 @@ public:
 	void send(size_t rank, Message &msg);
 	virtual void recv(size_t rank, Message &msg);
 
+	void sendAndReply_seq(std::vector<RequestAndReply> &rps);
+	void sendAndReply_batch(std::vector<RequestAndReply> &rps);
+	void sendAndReply(std::vector<RequestAndReply> &rps);
+
 	void setListener(AbstractListener *l) {
 		listener = l;
 	}

@@ -30,8 +30,15 @@ struct BaseConfig {
 	std::vector<int> hash_rank_mapping;
 	std::vector<std::string> peers_hosts;
 
+#ifdef USE_MPICLIENT
+	std::string backend="mpi";
+#else
+	std::string backend = "zmq";
+#endif
+
 	void print() {
 		myinfo("config: program=%s", program.c_str());
+		myinfo("config: backend=%s", backend.c_str());
 		myinfo("config: zip_output=%d", zip_output ? 1 : 0);
 		for (size_t i = 0; i < inputpath.size(); i++) {
 			myinfo("config: inputpath[%d]=%s", i, inputpath.at(i).c_str());

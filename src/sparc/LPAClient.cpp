@@ -38,6 +38,72 @@ NodeCollection* LPAClient::getNode() {
 }
 void LPAClient::do_query_and_update_nodes(const std::vector<uint32_t> &nodes,
 		const std::unordered_map<uint32_t, std::unordered_set<uint32_t>> &request) {
+#ifdef USE_MPICLIENT
+	do_query_and_update_nodes_batch(nodes,request);
+#else
+	do_query_and_update_nodes_seq(nodes, request);
+#endif
+
+}
+void LPAClient::do_query_and_update_nodes_batch(
+		const std::vector<uint32_t> &nodes,
+		const std::unordered_map<uint32_t, std::unordered_set<uint32_t>> &request) {
+	//request labels
+	std::unordered_map<uint32_t, uint32_t> labels;
+	std::vector<RequestAndReply> rps;
+	std::vector<std::vector<uint32_t>> values_list;
+	for (auto &kv : request) {
+		uint32_t rank = kv.first;
+		std::vector<uint32_t> values(kv.second.begin(), kv.second.end());
+		values_list.push_back(values);
+		auto message_ptr = std::shared_ptr<Message>(
+				new Message(need_compress_message()));
+		Message &msg = *message_ptr;
+		msg << LPAV1_QUERY_LABELS << values.size();
+		for (size_t i = 0; i < values.size(); i++) {
+			msg << values.at(i);
+		}
+
+		rps.push_back( { rank, message_ptr });
+	}
+
+	this->sendAndReply(rps);
+	for (size_t i = 0; i < rps.size(); i++) {
+		Message &msg2 = *rps.at(i).reply;
+		auto &values = values_list.at(i);
+		size_t N;
+		msg2 >> N;
+		assert(N == values.size());
+		for (size_t i = 0; i < values.size(); i++) {
+			uint32_t label;
+			msg2 >> label;
+			labels[values.at(i)] = label;
+		}
+
+	}
+
+	//update local
+	auto &edges = state.get_edges();
+	for (uint32_t this_node : nodes) {
+		auto &nc = edges.at(this_node);
+		std::vector<uint32_t> this_labels;
+		std::vector<float> this_weights;
+		for (auto &eg : nc.neighbors) {
+			uint32_t node = eg.node;
+#ifdef DEBUG
+				assert(labels.find(node)!=labels.end());
+	#endif
+			uint32_t label = labels.at(node);
+			this_labels.push_back(label);
+			this_weights.push_back(eg.weight);
+		}
+		state.update(this_node, this_labels, this_weights);
+	}
+}
+
+void LPAClient::do_query_and_update_nodes_seq(
+		const std::vector<uint32_t> &nodes,
+		const std::unordered_map<uint32_t, std::unordered_set<uint32_t>> &request) {
 
 	//request labels
 	std::unordered_map<uint32_t, uint32_t> labels;
@@ -127,8 +193,59 @@ void LPAClient::query_and_update_nodes() {
 		request.clear();
 	}
 }
-
 void LPAClient::notify_changed_nodes() {
+#ifdef USE_MPICLIENT
+	notify_changed_nodes_batch();
+#else
+	notify_changed_nodes_seq();
+#endif
+}
+
+void LPAClient::notify_changed_nodes_batch() {
+
+	auto &edges = state.get_edges();
+	std::unordered_map<uint32_t, std::unordered_set<uint32_t>> requests;
+	for (NodeCollection::iterator itor = edges.begin(); itor != edges.end();
+			itor++) {
+		uint32_t this_node = itor->first;
+		if (edges.at(this_node).changed) {
+			for (auto &eg : itor->second.neighbors) {
+				uint32_t node = eg.node;
+				uint32_t rank = fnv_hash(node) % npeers;
+				requests[rank].insert(node);
+			}
+		}
+	}
+
+	std::vector<RequestAndReply> rps;
+	for (auto &kv : requests) {
+		uint32_t rank = kv.first;
+
+		auto message_ptr = std::shared_ptr<Message>(
+				new Message(need_compress_message()));
+		Message &mymsg = *message_ptr;
+
+		mymsg << LPAV1_UPDATE_CHANGED << kv.second.size();
+		for (uint32_t node : kv.second) {
+			mymsg << node;
+		}
+		rps.push_back( { rank, message_ptr });
+
+	}
+
+	this->sendAndReply(rps);
+	for (size_t i = 0; i < rps.size(); i++) {
+		Message &message2 = *rps.at(i).reply;
+		std::string reply;
+		message2 >> reply;
+		if (reply != "OK") {
+			myerror("get reply failed");
+		}
+	}
+
+}
+
+void LPAClient::notify_changed_nodes_seq() {
 
 	auto &edges = state.get_edges();
 	std::unordered_map<uint32_t, std::unordered_set<uint32_t>> requests;
@@ -174,6 +291,59 @@ void LPAClient::notify_changed_nodes() {
 }
 
 void LPAClient::send_edge(std::vector<uint32_t> &from,
+		std::vector<uint32_t> &to, std::vector<float> &weight) {
+#ifdef USE_MPICLIENT
+	send_edge_batch(from,to,weight);
+#else
+	send_edge_seq(from, to, weight);
+#endif
+}
+
+void LPAClient::send_edge_batch(std::vector<uint32_t> &from,
+		std::vector<uint32_t> &to, std::vector<float> &weight) {
+	std::unordered_map<uint32_t,
+			std::vector<std::tuple<uint32_t, uint32_t, float>>> request;
+	for (size_t i = 0; i < from.size(); i++) {
+		uint32_t a = from.at(i);
+		uint32_t b = to.at(i);
+		float w = weight.at(i);
+		uint32_t rank = fnv_hash(a) % npeers;
+		request[rank].push_back(std::make_tuple(a, b, w));
+	}
+	std::vector<RequestAndReply> rps;
+	for (auto &kv : request) {
+		uint32_t rank = kv.first;
+		const auto &v = kv.second;
+
+		auto message_ptr = std::shared_ptr<Message>(
+				new Message(need_compress_message()));
+		Message &mymsg = *message_ptr;
+
+		mymsg << LPAV1_INIT_GRAPH << v.size();
+		for (const auto &t : v) {
+			uint32_t a;
+			uint32_t b;
+			float w;
+			std::tie(a, b, w) = t;
+			mymsg << a << b << w;
+			n_send++;
+		}
+		rps.push_back( { rank, message_ptr });
+
+	}
+
+	this->sendAndReply(rps);
+	for (size_t i = 0; i < rps.size(); i++) {
+		Message &message2 = *rps.at(i).reply;
+		std::string reply;
+		message2 >> reply;
+		if (reply != "OK") {
+			myerror("get reply failed");
+		}
+	}
+}
+
+void LPAClient::send_edge_seq(std::vector<uint32_t> &from,
 		std::vector<uint32_t> &to, std::vector<float> &weight) {
 
 	std::unordered_map<uint32_t,
@@ -232,7 +402,7 @@ void LPAClient::run_iteration(int i) {
 		myinfo("starting update changed info for iteration %d", i);
 	}
 
-	//first set nbr not changed;
+//first set nbr not changed;
 	auto &edges = state.get_edges();
 	for (NodeCollection::iterator itor = edges.begin(); itor != edges.end();
 			itor++) {

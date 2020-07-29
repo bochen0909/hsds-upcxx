@@ -42,13 +42,23 @@ public:
 protected:
 	void do_query_and_update_nodes(const std::vector<uint32_t> &nodes,
 			const std::unordered_map<uint32_t, std::unordered_set<uint32_t>> &request);
+	void do_query_and_update_nodes_seq(const std::vector<uint32_t> &nodes,
+			const std::unordered_map<uint32_t, std::unordered_set<uint32_t>> &request);
+	void do_query_and_update_nodes_batch(const std::vector<uint32_t> &nodes,
+			const std::unordered_map<uint32_t, std::unordered_set<uint32_t>> &request);
 
 
 	void query_and_update_nodes();
 	void notify_changed_nodes();
+	void notify_changed_nodes_seq();
+	void notify_changed_nodes_batch();
 
 	inline void send_edge(std::vector<uint32_t> &from,
 			std::vector<uint32_t> &to, std::vector<float> &weight);
+	inline void send_edge_seq(std::vector<uint32_t> &from,
+				std::vector<uint32_t> &to, std::vector<float> &weight);
+	inline void send_edge_batch(std::vector<uint32_t> &from,
+				std::vector<uint32_t> &to, std::vector<float> &weight);
 
 private:
 	LPAState state;

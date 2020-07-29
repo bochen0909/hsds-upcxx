@@ -1,26 +1,26 @@
 #include <vector>
 #include <string>
+#include <map>
 
-using namespace std;
 
-unsigned long kmer_to_number(const string &kmer);
+unsigned long kmer_to_number(const std::string &kmer);
 
-string number_to_kmer(unsigned long num, int k);
+std::string number_to_kmer(unsigned long num, int k);
 
-vector<string> generate_kmer(const string &seq, int k, char err_char,
+std::vector<std::string> generate_kmer(const std::string &seq, int k, char err_char,
 		bool is_canonical);
 
-vector<unsigned long> generate_kmer_number(const string &seq, int k,
+std::vector<unsigned long> generate_kmer_number(const std::string &seq, int k,
 		char err_char, bool is_canonical);
 
-vector<string> generate_kmer_for_fastseq(const string &seq, int k,
+std::vector<std::string> generate_kmer_for_fastseq(const std::string &seq, int k,
 		char err_char, bool is_canonical);
 
-string random_generate_kmer(const string &seq, int k, bool is_canonical);
+std::string random_generate_kmer(const std::string &seq, int k, bool is_canonical);
 
-string canonical_kmer(const string &seq);
+std::string canonical_kmer(const std::string &seq);
 
-string reverse_complement(const string &seq);
+std::string reverse_complement(const std::string &seq);
 
 std::vector<std::pair<uint32_t, uint32_t> > generate_edges(
 		std::vector<uint32_t> &reads, size_t max_degree);
@@ -33,4 +33,4 @@ std::string ulong2base64(unsigned long n);
 
 unsigned long base64toulong(const std::string &str);
 
-string kmer_to_base64(const string &kmer);
+std::string kmer_to_base64(const std::string &kmer);

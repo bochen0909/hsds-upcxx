@@ -29,9 +29,9 @@ public:
 			size_t max_degree);
 protected:
 
-	void send_edges(const std::vector<string> &kmers);
-	void send_edges_seq(const std::vector<string> &kmers);
-	void send_edges_batch(const std::vector<string> &kmers);
+	void send_edges(const std::vector<std::string> &kmers);
+	void send_edges_seq(const std::vector<std::string> &kmers);
+	void send_edges_batch(const std::vector<std::string> &kmers);
 
 	inline void map_line(int iteration, int n_interation,
 			const std::string &line, size_t min_shared_kmers, size_t max_degree,

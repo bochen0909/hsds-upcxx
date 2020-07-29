@@ -5,6 +5,7 @@
 #include <iostream>
 #include "catch.hpp"
 #include "kmer.h"
+using namespace std;
 
 TEST_CASE( "kmer and number ", "[kmer]" ) {
 	unsigned long n;

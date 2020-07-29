@@ -34,8 +34,58 @@ EdgeGeneratingClient::EdgeGeneratingClient(int rank,
 
 EdgeGeneratingClient::~EdgeGeneratingClient() {
 }
-
 void EdgeGeneratingClient::send_edges(const std::vector<string> &edges) {
+#ifdef USE_MPICLIENT
+	send_edges_batch(edges);
+#else
+	send_edges_seq(edges);
+#endif
+
+}
+void EdgeGeneratingClient::send_edges_batch(const std::vector<string> &edges) {
+	std::map<size_t, std::vector<string>> kmermap;
+	std::map<size_t, std::vector<uint32_t>> nodeidmap;
+
+	for (size_t i = 0; i < edges.size(); i++) {
+		const string &s = edges.at(i);
+		size_t k = fnv_hash(s) % npeers;
+		k = hash_rank_mapping[k];
+		kmermap[k].push_back(s);
+	}
+
+	std::vector<RequestAndReply> rps;
+	for (std::map<size_t, std::vector<string>>::iterator it = kmermap.begin();
+			it != kmermap.end(); it++) {
+
+		auto message_ptr = std::shared_ptr<Message>(
+				new Message(need_compress_message()));
+		Message &message = *message_ptr;
+
+		size_t rank = it->first;
+		if (true) {
+			size_t N = it->second.size();
+			message << N;
+			for (size_t i = 0; i < N; i++) {
+				message << it->second.at(i);
+				++n_send;
+			}
+		}
+		rps.push_back( { rank, message_ptr });
+	}
+
+	this->sendAndReply(rps);
+	for (auto &rp : rps) {
+		Message &message2 = *rp.reply;
+		std::string reply;
+		message2 >> reply;
+		if (reply != "OK") {
+			myerror("get reply failed");
+		}
+
+	}
+}
+
+void EdgeGeneratingClient::send_edges_seq(const std::vector<string> &edges) {
 	std::map<size_t, std::vector<string>> kmermap;
 	std::map<size_t, std::vector<uint32_t>> nodeidmap;
 

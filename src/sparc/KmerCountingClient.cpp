@@ -33,7 +33,18 @@ KmerCountingClient::KmerCountingClient(int rank,
 
 KmerCountingClient::~KmerCountingClient() {
 }
+
 template<typename V> void KmerCountingClient::send_kmers(
+		const std::vector<string> &kmers, const std::vector<V> &nodeids) {
+#ifdef USE_MPICLIENT
+	send_kmers_batch<V>(kmers,nodeids);
+#else
+	send_kmers_seq<V>(kmers, nodeids);
+#endif
+
+}
+
+template<typename V> void KmerCountingClient::send_kmers_batch(
 		const std::vector<string> &kmers, const std::vector<V> &nodeids) {
 	//send_kmers_seq(kmers,nodeids);
 	std::map<size_t, std::vector<string>> kmermap;
@@ -232,4 +243,11 @@ template void KmerCountingClient::send_kmers_seq(const std::vector<string>&,
 		const std::vector<size_t>&);
 
 template void KmerCountingClient::send_kmers_seq(const std::vector<string>&,
+		const std::vector<std::string>&);
+
+
+template void KmerCountingClient::send_kmers_batch(const std::vector<string>&,
+		const std::vector<size_t>&);
+
+template void KmerCountingClient::send_kmers_batch(const std::vector<string>&,
 		const std::vector<std::string>&);

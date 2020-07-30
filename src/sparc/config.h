@@ -32,6 +32,8 @@ struct BaseConfig {
 
 #ifdef USE_MPICLIENT
 	std::string backend="mpi";
+#elif UPCXX_BACKEND
+	std::string backend="upcxx";
 #else
 	std::string backend = "zmq";
 #endif

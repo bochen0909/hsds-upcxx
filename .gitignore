@@ -36,5 +36,6 @@
 .settings
 build/
 build2/
+release/
 .pydevproject
 .ipynb_checkpoints

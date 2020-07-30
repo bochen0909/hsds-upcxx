@@ -20,6 +20,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -s")
 option(BUILD_SPARC_MIMIR "build Mimir version of Sparc" ON)
 option(BUILD_SPARC_MRMPI "build MR-MPI version of Sparc" ON)
 option(BUILD_SPARC_MPI "build pure MPI version of Sparc" ON)
+option(BUILD_SPARC_UPCXX "build UPCXX version of Sparc" ON)
 
 option(BUILD_WITH_LEVELDB "build MPI version of Sparc with leveldb support" OFF)
 option(BUILD_WITH_MPIClient "build MPI version of Sparc with mpi client" OFF)
@@ -29,6 +30,7 @@ set(LOCAL_EXT_PREFIX_DIR ${PROJECT_SOURCE_DIR}/extlib/local)
 add_custom_target(sparc_mimir ALL)
 add_custom_target(sparc_mrmpi ALL)
 add_custom_target(sparc_mpi ALL)
+add_custom_target(sparc_upcxx ALL)
 
 ########## external project ##################
 
@@ -374,6 +376,58 @@ if(BUILD_SPARC_MIMIR)
 	target_compile_definitions(merge_intrmed_mpi PUBLIC "-DUSE_TSL_ROBIN_MAP")
 	add_dependencies(merge_intrmed_mpi tsl_robin_map_lib)
 	
+	
+endif()
+
+
+
+
+
+############# upcxx programs ###########################
+if(BUILD_SPARC_UPCXX)
+	############# check UPCXX ##############################
+	set (UPCXX_VERBOSE ON)
+	include(cmake/UPCXXConfig.cmake)
+	if (NOT EXISTS "${UPCXX_META_EXECUTABLE}")
+	   message( FATAL_ERROR "cannot find upcxx" )
+	endif()
+	############# end check UPCXX ##############################
+	
+	find_package(ZLIB REQUIRED)
+
+	link_directories( "${LOCAL_EXT_PREFIX_DIR}/lib" )
+	link_directories( "${LOCAL_EXT_PREFIX_DIR}/lib64" )
+
+	add_executable(edge_generating_upc 
+		src/edge_generating_upc.cpp 
+		src/kmer.cpp src/sparc/log.cpp src/sparc/utils.cpp
+		)
+
+	add_executable(kmer_counting_upc 
+		src/kmer_counting_upc.cpp 
+		src/kmer.cpp src/sparc/log.cpp src/sparc/utils.cpp
+		)
+	
+	add_executable(kmer_read_mapping_upc 
+		src/kmer_read_mapping_upc.cpp 
+		src/kmer.cpp src/sparc/log.cpp src/sparc/utils.cpp
+		)
+
+	add_executable(lpav1_upc 
+		src/lpav1_upc.cpp 
+		src/kmer.cpp src/sparc/log.cpp src/sparc/utils.cpp
+		)
+
+						
+	foreach(EXEC edge_generating_upc kmer_counting_upc kmer_read_mapping_upc lpav1_upc)
+		add_dependencies(${EXEC} spdloglib gzstreamlib)
+		target_include_directories(${EXEC} PUBLIC ${UPCXX_INCLUDE_DIRS} "${LOCAL_EXT_PREFIX_DIR}/include" )
+		target_compile_definitions(${EXEC} PUBLIC ${UPCXX_DEFINITIONS})
+		target_compile_definitions(merge_intrmed_mpi PUBLIC "-DUSE_UPCXXCLIENT")
+		target_link_libraries(${EXEC} PUBLIC spdlog gzstream ZLIB::ZLIB ${UPCXX_LIBRARIES})
+	    set_target_properties(${EXEC} PROPERTIES EXCLUDE_FROM_ALL TRUE)
+	    add_dependencies(sparc_upcxx ${EXEC})
+	endforeach(EXEC)
 	
 endif()
 

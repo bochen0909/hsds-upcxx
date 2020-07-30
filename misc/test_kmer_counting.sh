@@ -15,8 +15,18 @@ test_kmer_counting () {
 	local opt2=$4
 	
    local DATA=$SCRIPTDIR/../data/sample2
-   CMD1="$PREFIX1 $MPICMD $prog1 $opt1"
-   CMD2="$PREFIX2 $MPICMD $prog2 $opt2"
+   
+   
+	MPICMD1=$MPICMD
+	MPICMD2=$MPICMD
+	if [[ $MPICMD1 == "mpirun*"  && $prog1 == "*upc" ]]; then
+		MPICMD1="GASNET_PSHM_NODES=4"
+	fi
+	if [[ $MPICMD2 == "mpirun*"  && $prog2 == "*upc" ]]; then
+		MPICMD2="GASNET_PSHM_NODES=4"
+	fi
+   CMD1="$PREFIX1 $MPICMD1 $prog1 $opt1"
+   CMD2="$PREFIX2 $MPICMD2 $prog2 $opt2"
    echo Comparing \"$CMD1\" to \"$CMD2\"
    
    local out1=${SANDBOXDIR}/test1
@@ -62,6 +72,10 @@ test_kmer_counting () {
 
 for MPICMD in "" "mpirun -n 4"; do
 
+	test_kmer_counting kmer_counting_mpi kmer_counting_upc "-k 25" "-k 25"
+	
+	CAT1=zcat test_kmer_counting kmer_counting_upc kmer_counting_upc "-k 5 -z" "-k 5"
+
 	test_kmer_counting kmer_counting_mrmpi kmer_counting_mimir "-k 5" "-k 5"
 	test_kmer_counting kmer_counting_mrmpi kmer_counting_mimir "-k 25" "-k 25"
 	
@@ -71,10 +85,6 @@ for MPICMD in "" "mpirun -n 4"; do
 	CAT1=zcat test_kmer_counting kmer_counting_mpi kmer_counting_mpi "-k 5 -z" "-k 5"
 	
 	COMPRESS1=1 test_kmer_counting kmer_counting_mpi kmer_counting_mpi "-k 5" "-k 5"
-	
-	test_kmer_counting kmer_counting_mpi kmer_counting_upc "-k 25" "-k 25"
-	
-	CAT1=zcat test_kmer_counting kmer_counting_upc kmer_counting_upc "-k 5 -z" "-k 5"
 	
 done 
 

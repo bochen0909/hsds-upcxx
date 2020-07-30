@@ -45,10 +45,17 @@ test_lpav1 () {
 	in1=$MPI_EDGE_INPUT	
 	in2=$in1
 
-   CMD1="$PREFIX1 $MPICMD $prog1 $opt1"
-   CMD2="$PREFIX2 $MPICMD $prog2 $opt2"
+	MPICMD1=$MPICMD
+	MPICMD2=$MPICMD
+	if [[ $MPICMD1 == "mpirun*"  && $prog1 == "*upc" ]]; then
+		MPICMD1="GASNET_PSHM_NODES=4"
+	fi
+	if [[ $MPICMD2 == "mpirun*"  && $prog2 == "*upc" ]]; then
+		MPICMD2="GASNET_PSHM_NODES=4"
+	fi
+   CMD1="$PREFIX1 $MPICMD1 $prog1 $opt1"
+   CMD2="$PREFIX2 $MPICMD2 $prog2 $opt2"
    echo Comparing \"$CMD1\" to \"$CMD2\"
-   
    
    rm -fr $out1;rm -fr $out2
    
@@ -85,13 +92,14 @@ for MPICMD in "" "mpirun -n 4"; do
 
 	PARAM="-n 1000"
 	PARAMZ="$PARAM -z"
-	CAT2=zcat test_lpav1 lpav1_mpi lpav1_mpi "$PARAM" "$PARAMZ" 
-	
-	COMPRESS1=1 test_lpav1 lpav1_mpi lpav1_mpi "$PARAM" "$PARAM"
 	
 	test_lpav1 lpav1_mpi lpav1_upc "$PARAM" "$PARAM"
 	
 	CAT2=zcat test_lpav1 lpav1_upc lpav1_upc "$PARAM" "$PARAMZ"  
+	
+	CAT2=zcat test_lpav1 lpav1_mpi lpav1_mpi "$PARAM" "$PARAMZ" 
+	
+	COMPRESS1=1 test_lpav1 lpav1_mpi lpav1_mpi "$PARAM" "$PARAM"
 
 done 
 

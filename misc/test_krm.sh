@@ -60,8 +60,17 @@ test_krm () {
 	local opt2=$4
 	
    local DATA=$SCRIPTDIR/../data/sample2
-   CMD1="$PREFIX1 $MPICMD $prog1 $opt1"
-   CMD2="$PREFIX2 $MPICMD $prog2 $opt2"
+
+	MPICMD1=$MPICMD
+	MPICMD2=$MPICMD
+	if [[ $MPICMD1 == "mpirun*"  && $prog1 == "*upc" ]]; then
+		MPICMD1="GASNET_PSHM_NODES=4"
+	fi
+	if [[ $MPICMD2 == "mpirun*"  && $prog2 == "*upc" ]]; then
+		MPICMD2="GASNET_PSHM_NODES=4"
+	fi
+   CMD1="$PREFIX1 $MPICMD1 $prog1 $opt1"
+   CMD2="$PREFIX2 $MPICMD2 $prog2 $opt2"
    echo Comparing \"$CMD1\" to \"$CMD2\"
    
    local out1=${SANDBOXDIR}/test1
@@ -96,20 +105,22 @@ test_krm () {
 
 for MPICMD in "" "mpirun -n 4"; do
 
+	test_krm kmer_read_mapping_mpi kmer_read_mapping_upc "-k 25" "-k 25"
+	
+	CAT1=zcat test_krm kmer_read_mapping_upc kmer_read_mapping_upc "-k 5 -z" "-k 5"
+
 	test_krm kmer_read_mapping_mrmpi kmer_read_mapping_mimir "-k 5" "-k 5"
+	
 	test_krm kmer_read_mapping_mrmpi kmer_read_mapping_mimir "-k 25" "-k 25"
 	
 	test_krm kmer_read_mapping_mpi kmer_read_mapping_mimir "-k 5" "-k 5"
+	
 	test_krm kmer_read_mapping_mpi kmer_read_mapping_mimir "-k 25" "-k 25"
 	
 	CAT1=zcat test_krm kmer_read_mapping_mpi kmer_read_mapping_mpi "-k 5 -z" "-k 5"
 	
 	COMPRESS1=1 test_krm kmer_read_mapping_mpi kmer_read_mapping_mpi "-k 5" "-k 5"
 
-	test_krm kmer_read_mapping_mpi kmer_read_mapping_upc "-k 25" "-k 25"
-	
-	CAT1=zcat test_krm kmer_read_mapping_upc kmer_read_mapping_upc "-k 5 -z" "-k 5"
-	
 done 
 
 

@@ -67,8 +67,16 @@ test_generate_edges () {
 	in1=$(get_input $prog1)	
 	in2=$(get_input $prog2)
 
-   CMD1="$PREFIX1 $MPICMD $prog1 $opt1"
-   CMD2="$PREFIX2 $MPICMD $prog2 $opt2"
+	MPICMD1=$MPICMD
+	MPICMD2=$MPICMD
+	if [[ $MPICMD1 == "mpirun*"  && $prog1 == "*upc" ]]; then
+		MPICMD1="GASNET_PSHM_NODES=4"
+	fi
+	if [[ $MPICMD2 == "mpirun*"  && $prog2 == "*upc" ]]; then
+		MPICMD2="GASNET_PSHM_NODES=4"
+	fi
+   CMD1="$PREFIX1 $MPICMD1 $prog1 $opt1"
+   CMD2="$PREFIX2 $MPICMD2 $prog2 $opt2"
    echo Comparing \"$CMD1\" to \"$CMD2\"
    
    
@@ -109,6 +117,11 @@ for MPICMD in "" "mpirun -n 4"; do
 
 	PARAM="--min-shared-kmers 0 --max-degree 10000000"
 	PARAMZ="$PARAM -z"
+	
+	test_generate_edges edge_generating_upc edge_generating_mpi "$PARAM" "$PARAM"
+
+	CAT1=zcat test_generate_edges edge_generating_upc edge_generating_upc "$PARAMZ" "$PARAM" 
+		
 	test_generate_edges edge_generating_mrmpi edge_generating_mimir "$PARAM" "$PARAM" 
 	
 	test_generate_edges edge_generating_mpi edge_generating_mimir  "$PARAM" "$PARAM"
@@ -118,10 +131,6 @@ for MPICMD in "" "mpirun -n 4"; do
 	CAT1=zcat test_generate_edges edge_generating_mpi edge_generating_mpi "$PARAMZ" "$PARAM" 
 	
 	COMPRESS1=1 test_generate_edges edge_generating_mpi edge_generating_mpi "$PARAM" "$PARAM" 
-	
-	test_generate_edges edge_generating_upc edge_generating_mpi "$PARAM" "$PARAM"
-
-	CAT1=zcat test_generate_edges edge_generating_upc edge_generating_upc "$PARAMZ" "$PARAM" 
 	
 done 
 

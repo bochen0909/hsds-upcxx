@@ -393,6 +393,7 @@ if(BUILD_SPARC_UPCXX)
 	endif()
 	############# end check UPCXX ##############################
 	
+	find_package(MPI 3.0 REQUIRED)
 	find_package(ZLIB REQUIRED)
 
 	link_directories( "${LOCAL_EXT_PREFIX_DIR}/lib" )
@@ -424,6 +425,7 @@ if(BUILD_SPARC_UPCXX)
 		target_include_directories(${EXEC} PUBLIC ${UPCXX_INCLUDE_DIRS} "${LOCAL_EXT_PREFIX_DIR}/include" )
 		target_compile_definitions(${EXEC} PUBLIC ${UPCXX_DEFINITIONS})
 		target_compile_definitions(merge_intrmed_mpi PUBLIC "-DUSE_UPCXXCLIENT")
+                target_link_libraries(${EXEC} PUBLIC ${MPI_CXX_LIBRARIES})
 		target_link_libraries(${EXEC} PUBLIC spdlog gzstream ZLIB::ZLIB ${UPCXX_LIBRARIES})
 	    set_target_properties(${EXEC} PROPERTIES EXCLUDE_FROM_ALL TRUE)
 	    add_dependencies(sparc_upcxx ${EXEC})

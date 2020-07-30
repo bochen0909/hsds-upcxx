@@ -63,11 +63,11 @@ test_krm () {
 
 	MPICMD1=$MPICMD
 	MPICMD2=$MPICMD
-	if [[ $MPICMD1 == "mpirun*"  && $prog1 == "*upc" ]]; then
-		MPICMD1="GASNET_PSHM_NODES=4"
+	if [[ $MPICMD1 == mpirun*  && $prog1 == *upc ]]; then
+		MPICMD1="upcxx-run -n 4"
 	fi
-	if [[ $MPICMD2 == "mpirun*"  && $prog2 == "*upc" ]]; then
-		MPICMD2="GASNET_PSHM_NODES=4"
+	if [[ $MPICMD2 == mpirun*  && $prog2 == *upc ]]; then
+		MPICMD2="upcxx-run -n 4"
 	fi
    CMD1="$PREFIX1 $MPICMD1 $prog1 $opt1"
    CMD2="$PREFIX2 $MPICMD2 $prog2 $opt2"

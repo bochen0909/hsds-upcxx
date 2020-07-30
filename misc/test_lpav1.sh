@@ -38,9 +38,9 @@ compare_output() {
 
 test_lpav1 () {
 	local prog1=$1
-	local prog2=$1
-	local opt1=$2
-	local opt2=$3
+	local prog2=$2
+	local opt1=$3
+	local opt2=$4
 
 	in1=$MPI_EDGE_INPUT	
 	in2=$in1
@@ -85,9 +85,13 @@ for MPICMD in "" "mpirun -n 4"; do
 
 	PARAM="-n 1000"
 	PARAMZ="$PARAM -z"
-	CAT2=zcat test_lpav1 lpav1_mpi "$PARAM" "$PARAMZ" 
+	CAT2=zcat test_lpav1 lpav1_mpi lpav1_mpi "$PARAM" "$PARAMZ" 
 	
-	COMPRESS1=1 test_lpav1 lpav1_mpi "$PARAM" "$PARAM"
+	COMPRESS1=1 test_lpav1 lpav1_mpi lpav1_mpi "$PARAM" "$PARAM"
+	
+	test_lpav1 lpav1_mpi lpav1_upc "$PARAM" "$PARAM"
+	
+	CAT2=zcat test_lpav1 lpav1_upc lpav1_upc "$PARAM" "$PARAMZ"  
 
 done 
 

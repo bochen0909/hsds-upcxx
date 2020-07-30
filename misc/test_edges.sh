@@ -13,6 +13,7 @@ out1=${SANDBOXDIR}/test1
 out2=${SANDBOXDIR}/test2
 
 MPI_INPUT=${SANDBOXDIR}/krm_mpi
+UPCXX_INPUT=${SANDBOXDIR}/krm_upcxx
 MIMIR_INPUT=${SANDBOXDIR}/krm_mimir
 MRMPI_INPUT=${SANDBOXDIR}/krm_mrmpi
 
@@ -49,6 +50,10 @@ get_input(){
 	
 	if [[ $prog == edge_generating_mpi ]]; then
 		echo ${MPI_INPUT}
+	fi
+	
+	if [[ $prog == edge_generating_upc ]]; then
+		echo ${UPCXX_INPUT}
 	fi
 	
 }
@@ -96,6 +101,7 @@ test_generate_edges () {
 rm -fr $MIMIR_INPUT && kmer_read_mapping_mimir -k 5 -i $DATA -o $MIMIR_INPUT >> /dev/null 2>&1
 rm -fr $MRMPI_INPUT && kmer_read_mapping_mrmpi -k 5 -i $DATA -o $MRMPI_INPUT  >> /dev/null 2>&1
 rm -fr $MPI_INPUT   && kmer_read_mapping_mpi -z -k 5 -i $DATA -o $MPI_INPUT  >> /dev/null 2>&1
+rm -fr $UPCXX_INPUT   && kmer_read_mapping_upc -z -k 5 -i $DATA -o $UPCXX_INPUT  >> /dev/null 2>&1
 
 
 
@@ -111,10 +117,12 @@ for MPICMD in "" "mpirun -n 4"; do
 	
 	CAT1=zcat test_generate_edges edge_generating_mpi edge_generating_mpi "$PARAMZ" "$PARAM" 
 	
-	# test_generate_edges edge_generating_mpi edge_generating_mpi "$PARAM" "$PARAM"
-	
 	COMPRESS1=1 test_generate_edges edge_generating_mpi edge_generating_mpi "$PARAM" "$PARAM" 
+	
+	test_generate_edges edge_generating_upc edge_generating_mpi "$PARAM" "$PARAM"
 
+	CAT1=zcat test_generate_edges edge_generating_upc edge_generating_upc "$PARAMZ" "$PARAM" 
+	
 done 
 
 

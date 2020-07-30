@@ -70,10 +70,12 @@ for MPICMD in "" "mpirun -n 4"; do
 	
 	CAT1=zcat test_kmer_counting kmer_counting_mpi kmer_counting_mpi "-k 5 -z" "-k 5"
 	
-	# test_kmer_counting kmer_counting_mpi kmer_counting_mpi "-k 5 --db leveldb" "-k 5"
-	
 	COMPRESS1=1 test_kmer_counting kmer_counting_mpi kmer_counting_mpi "-k 5" "-k 5"
-
+	
+	test_kmer_counting kmer_counting_mpi kmer_counting_upc "-k 25" "-k 25"
+	
+	CAT1=zcat test_kmer_counting kmer_counting_upc kmer_counting_upc "-k 5 -z" "-k 5"
+	
 done 
 
 

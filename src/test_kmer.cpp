@@ -36,11 +36,11 @@ TEST_CASE( "test with canonical kmer ", "[kmer]" ) {
 
 	vector<string> v;
 
-	v = generate_kmer(s1, 31, 'N', true);
+	v = generate_kmer(s1, 31, "N", true);
 	REQUIRE(v.size() == 1);
 	REQUIRE(v[0] == s2);
 
-	v = generate_kmer(s2, 31, 'N', true);
+	v = generate_kmer(s2, 31, "N", true);
 	REQUIRE(v.size() == 1);
 	REQUIRE(v[0] == s2);
 }
@@ -48,29 +48,29 @@ TEST_CASE( "test with canonical kmer ", "[kmer]" ) {
 TEST_CASE( "test with small seq ", "[kmer]" ) {
 	string seq = "ATCG";
 	int k = 4;
-	vector<string> kmers = generate_kmer(seq, k, 'N', true);
+	vector<string> kmers = generate_kmer(seq, k, "N", true);
 	REQUIRE(1 == kmers.size());
 
 	seq = "ATCG";
 	k = 5;
-	kmers = generate_kmer(seq, k, 'N', true);
+	kmers = generate_kmer(seq, k, "N", true);
 	REQUIRE(0 == kmers.size());
 
 	// "Kmer generator" should "generate 4 kmers since ATC is duplicate"
 	seq = "ATCGATC";
 	k = 3;
-	kmers = generate_kmer(seq, k, 'N', false);
+	kmers = generate_kmer(seq, k, "N", false);
 	REQUIRE(4 == kmers.size());
 
 	// "Kmer generator" should "generate 2 kmers
 	seq = "ATCGATC";
 	k = 3;
-	kmers = generate_kmer(seq, k, 'N', true);
+	kmers = generate_kmer(seq, k, "N", true);
 	REQUIRE(2 == kmers.size());
 
 	seq = "ATCGACGTNACNACTGGTAC";
 	k = 5;
-	kmers = generate_kmer(seq, k, 'N', true);
+	kmers = generate_kmer(seq, k, "N", true);
 	REQUIRE(8 == kmers.size());
 
 }
@@ -79,9 +79,9 @@ TEST_CASE( "test kmer gen for numbers", "[kmer]" ) {
 
 	string seq = "ATCGACGTNACNACTGGTAC";
 	int k = 5;
-	vector<string> kmers = generate_kmer(seq, k, 'N', true);
+	vector<string> kmers = generate_kmer(seq, k, "N", true);
 	REQUIRE(8 == kmers.size());
-	vector<unsigned long> numbers = generate_kmer_number(seq, k, 'N', true);
+	vector<unsigned long> numbers = generate_kmer_number(seq, k, "N", true);
 	REQUIRE(kmers.size() == numbers.size());
 	for (size_t i = 0; i < kmers.size(); i++) {
 		REQUIRE(numbers.at(i) == kmer_to_number(kmers.at(i)));
@@ -94,28 +94,28 @@ TEST_CASE( "test kmer gen for numbers", "[kmer]" ) {
 TEST_CASE( "test kmer gen for fastseq", "[kmer]" ) {
 	string seq = "ATCG";
 	int k = 4;
-	vector<string> kmers = generate_kmer_for_fastseq(seq, k, 'N', true);
+	vector<string> kmers = generate_kmer_for_fastseq(seq, k, "N", true);
 	REQUIRE(1 == kmers.size());
 	cout << kmers[0] << endl;
 
 	seq = "ATCG";
 	k = 5;
-	kmers = generate_kmer_for_fastseq(seq, k, 'N', true);
+	kmers = generate_kmer_for_fastseq(seq, k, "N", true);
 	REQUIRE(0 == kmers.size());
 
 	seq = "ATCGATC";
 	k = 3;
-	kmers = generate_kmer_for_fastseq(seq, k, 'N', false);
+	kmers = generate_kmer_for_fastseq(seq, k, "N", false);
 	REQUIRE(5 == kmers.size());
 
 	seq = "ATCGATC";
 	k = 3;
-	kmers = generate_kmer_for_fastseq(seq, k, 'N', true);
+	kmers = generate_kmer_for_fastseq(seq, k, "N", true);
 	REQUIRE(5 == kmers.size());
 
 	seq = "ATCGACGTNACNACTGGTAC";
 	k = 5;
-	kmers = generate_kmer_for_fastseq(seq, k, 'N', true);
+	kmers = generate_kmer_for_fastseq(seq, k, "N", true);
 	REQUIRE(8 - 5 + 1 + 8 - 5 + 1 == kmers.size());
 
 }
@@ -415,7 +415,7 @@ TEST_CASE( "test with bigger seq ", "[kmer]" ) {
 			"AGGGCAACAGAAGATGATAACAGAAAGGCATTTTCCATGCCTATATTCGGTCGTTTTACCCAGAGAGCCCAGCAGACACTGATGCTGGCCCAGCGGATCGCNTCTGTCCCAGCTTATGGGATTCCAGCACGCTGTTTTCCAGCGTTTTCTTTGCCCTGGGGCTCAGCTCGATCCGGTTTCCTCTGGCCTCTTCCGGATCACCG";
 
 	SECTION( "canonical is false "){
-	vector<string> kmers2 = generate_kmer(seq, k, 'N',false);
+	vector<string> kmers2 = generate_kmer(seq, k, "N",false);
 	for (string s : kmers2) {
 		REQUIRE( k == s.size());
 	}
@@ -434,7 +434,7 @@ TEST_CASE( "test with bigger seq ", "[kmer]" ) {
 	auto last = std::unique(ckmers1.begin(), ckmers1.end());
 	ckmers1.erase(last, ckmers1.end());
 
-	vector<string> kmers2 = generate_kmer(seq, k, 'N',true);
+	vector<string> kmers2 = generate_kmer(seq, k, "N",true);
 	for (string s : kmers2) {
 		REQUIRE( k == s.size());
 	}

@@ -148,7 +148,7 @@ inline void process_line(const std::string &line, KeyValue *kv) {
 	string seq = arr.at(2);
 	trim(seq);
 
-	std::vector<std::string> kmers = generate_kmer(seq, kmer_length, 'N',
+	std::vector<std::string> kmers = generate_kmer(seq, kmer_length, "N",
 			!without_canonical_kmer);
 	for (int i = 0; i < kmers.size(); i++) {
 		uint64_t one = 1;

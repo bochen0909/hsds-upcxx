@@ -163,7 +163,7 @@ inline void map_line(const string &line, int kmer_length,
 	trim(seq);
 	//uint32_t nodeid = std::stoul(arr.at(0));
 
-	std::vector<std::string> v = generate_kmer(seq, kmer_length, 'N',
+	std::vector<std::string> v = generate_kmer(seq, kmer_length, "N",
 			!without_canonical_kmer);
 	upcxx::future<> fut_all = upcxx::make_future();
 	for (size_t i = 0; i < v.size(); i++) {

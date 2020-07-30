@@ -3,12 +3,14 @@
 #include <unordered_set>
 #include <tuple>
 #include <exception>
-#include <boost/algorithm/string.hpp>
-#include <boost/lambda/lambda.hpp>
-#include <boost/algorithm/searching/knuth_morris_pratt.hpp>
+#include <sstream>
+//#include <boost/algorithm/string.hpp>
+//#include <boost/lambda/lambda.hpp>
+//#include <boost/algorithm/searching/knuth_morris_pratt.hpp>
 #include <stdlib.h>
-
+#include <cmath>
 #include "kmer.h"
+#include "sparc/utils.h"
 using namespace std;
 
 #define rand01 (((double) rand() / (RAND_MAX)) )
@@ -108,11 +110,12 @@ string random_generate_kmer(const string &seq, int k, bool is_canonical) {
 	}
 }
 
-vector<string> generate_kmer(const string &seq, int k, char err_char,
+vector<string> generate_kmer(const string &seq, int k, const char *err_char,
 		bool is_canonical) {
 	std::vector<std::string> splits;
 
-	boost::split(splits, seq, boost::lambda::_1 == err_char);
+	sparc::split(splits, seq, err_char);
+	//boost::split(splits, seq, boost::lambda::_1 == err_char);
 
 	std::vector<string> results;
 
@@ -136,7 +139,7 @@ vector<string> generate_kmer(const string &seq, int k, char err_char,
 }
 
 vector<unsigned long> generate_kmer_number(const string &seq, int k,
-		char err_char, bool is_canonical) {
+		const char *err_char, bool is_canonical) {
 	vector<string> kmers = generate_kmer(seq, k, err_char, is_canonical);
 	vector<unsigned long> numbers(kmers.size());
 	for (size_t i = 0; i < kmers.size(); i++) {
@@ -146,10 +149,12 @@ vector<unsigned long> generate_kmer_number(const string &seq, int k,
 }
 
 vector<string> generate_kmer_for_fastseq(const string &seq, int k,
-		char err_char, bool is_canonical) {
+		const char *err_char, bool is_canonical) {
 	std::vector<std::string> splits;
 
-	boost::split(splits, seq, boost::lambda::_1 == err_char);
+	sparc::split(splits, seq, err_char);
+
+	//boost::split(splits, seq, boost::lambda::_1 == err_char);
 
 	std::vector<string> results;
 
@@ -261,7 +266,7 @@ std::vector<std::pair<uint32_t, uint32_t> > generate_edges(
 		return results;
 	} else {
 		std::vector<std::pair<uint32_t, uint32_t> > results;
-		int m = ceil(max_degree / 2.0 * reads.size());
+		int m = std::ceil(max_degree / 2.0 * reads.size());
 		uint32_t d1[m], d2[m];
 		random_choice(reads.data(), reads.size(), d1, m);
 		random_choice(reads.data(), reads.size(), d2, m);

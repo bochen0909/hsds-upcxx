@@ -28,6 +28,7 @@
 
 using namespace std;
 using namespace sparc;
+#define KMER_SEND_BATCH_SIZE (100*1000)
 
 DistrMap<std::string, uint32_t> *g_map = 0;
 size_t g_n_sent = 0;
@@ -149,7 +150,7 @@ int main(int argc, char **argv) {
 }
 
 inline void map_line(const string &line, int kmer_length,
-		bool without_canonical_kmer, upcxx::future<> &fut_all) {
+		bool without_canonical_kmer, std::vector<std::string> &kmers) {
 	std::vector<std::string> arr;
 	split(arr, line, "\t");
 	if (arr.empty()) {
@@ -168,32 +169,39 @@ inline void map_line(const string &line, int kmer_length,
 
 	for (size_t i = 0; i < v.size(); i++) {
 		std::string s = kmer_to_base64(v[i]);
-		auto fut = g_map->incr(s, 1);
-		fut_all = upcxx::when_all(fut_all, fut);
-		g_n_sent++;
-		if (i % 10 == 0) {
-			upcxx::progress();
-		}
+		kmers.push_back(s);
 	}
 }
 
 int process_seq_file(const std::string &filepath, int kmer_length,
 		bool without_canonical_kmer) {
-	upcxx::future<> fut_all = upcxx::make_future();
+
+	std::vector<std::string> kmers;
 	if (endswith(filepath, ".gz")) {
 		igzstream file(filepath.c_str());
 		std::string line;
 		while (std::getline(file, line)) {
-			map_line(line, kmer_length, without_canonical_kmer, fut_all);
+			map_line(line, kmer_length, without_canonical_kmer, kmers);
+			if (kmers.size() >= KMER_SEND_BATCH_SIZE) {
+				g_map->incr(kmers).wait();
+			}
+			upcxx::progress();
 		}
 	} else {
 		std::ifstream file(filepath);
 		std::string line;
 		while (std::getline(file, line)) {
-			map_line(line, kmer_length, without_canonical_kmer,fut_all);
+			map_line(line, kmer_length, without_canonical_kmer, kmers);
+			if (kmers.size() >= KMER_SEND_BATCH_SIZE) {
+				g_map->incr(kmers).wait();
+			}
+			upcxx::progress();
 		}
 	}
-	fut_all.wait();
+	if (kmers.size() > 0) {
+		g_map->incr(kmers).wait();
+	}
+
 	return 0;
 }
 

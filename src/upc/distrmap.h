@@ -51,7 +51,29 @@ public:
 				}, local_map, key, val);
 	}
 
-	template<typename SetV> upcxx::future<> value_set_insert(const K &key, const SetV &val) {
+	upcxx::future<> incr(const std::vector<K> &arr) {
+		std::unordered_map<uint32_t, std::vector<K>> grouped;
+		for (auto &a : arr) {
+			grouped[get_target_rank(a)].push_back(a);
+		}
+		upcxx::future<> fut_all = upcxx::make_future();
+
+		for (auto &kv : grouped) {
+			uint32_t target_rank = kv.first;
+			std::vector<K> &v = kv.second;
+			upcxx::future<> fut = upcxx::rpc(target_rank,
+					[](dobj_map_t &lmap, upcxx::view<K> val) {
+						for (auto a : val) {
+							lmap->operator[](a)++;
+						}
+					}, local_map, upcxx::make_view(v.begin(),v.end()));
+			fut_all = upcxx::when_all(fut_all, fut);
+		}
+		return fut_all;
+	}
+
+	template<typename SetV> upcxx::future<> value_set_insert(const K &key,
+			const SetV &val) {
 		return upcxx::rpc(get_target_rank(key),
 				[](dobj_map_t &lmap, K key, SetV val) {
 					lmap->operator[](key).insert(val);

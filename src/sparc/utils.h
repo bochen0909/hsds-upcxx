@@ -10,6 +10,10 @@
 
 #include <string>
 #include <vector>
+#include <random>
+#include <algorithm>
+#include <cassert>
+#include <unordered_map>
 
 namespace sparc {
 
@@ -51,9 +55,44 @@ inline std::string rtrim_copy(std::string s);
 // trim from both ends (copying)
 std::string trim_copy(std::string s);
 
-void shuffle(std::vector<int>& v);
+template<typename T> void shuffle(std::vector<T> &v) {
+	std::random_device rd;
+	std::default_random_engine rng(rd());
+	std::shuffle(std::begin(v), std::end(v), rng);
+}
 
-void shuffle(std::vector<std::string> &v);
+template<typename T> inline void split(std::vector<std::vector<T>> &results,
+		const std::vector<T> &v, uint32_t block_size) {
+	assert(block_size > 0);
+
+	std::vector<T> tmp;
+	for (size_t i = 0; i < v.size(); i++) {
+		if (tmp.size() >= block_size) {
+			results.push_back(tmp);
+			tmp.clear();
+		}
+	}
+}
+
+template<typename K, typename V>
+void map_to_blocks(std::vector<std::pair<K, std::vector<V>>> &results,
+		const std::unordered_map<K, std::vector<V>> &amap, uint32_t block_size, bool do_shuffle =
+				true) {
+
+	for (auto &kv : amap) {
+		auto &k = kv.first;
+		std::vector<std::vector<V>> tmp;
+		split(tmp, kv.second, block_size);
+		for (auto &x : tmp) {
+			results.push_back( { k, x });
+		}
+
+	}
+	if (do_shuffle) {
+		shuffle(results);
+	}
+
+}
 
 std::vector<std::string> split(const std::string &source,
 		const char *delimiter = " ", bool keepEmpty = false);

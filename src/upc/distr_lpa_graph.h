@@ -8,6 +8,7 @@
 #endif
 
 #include "../sparc/log.h"
+#include "../sparc/utils.h"
 
 #ifdef USE_TSL_ROBIN_MAP
 template<typename K, typename V>
@@ -209,9 +210,11 @@ public:
 	}
 
 	void notify_changed_nodes() {
-		std::unordered_set<uint32_t> changed_nbrs;
+
+		std::vector<std::pair<uint32_t, std::vector<uint32_t>>> requests;
 		uint32_t i = 0;
 		{
+			std::unordered_set<uint32_t> changed_nbrs;
 			for (unordered_map<uint32_t, NodeInfo>::iterator itor =
 					local_map->begin(); itor != local_map->end(); itor++) {
 				if (itor->second.changed) {
@@ -223,16 +226,16 @@ public:
 					upcxx::progress();
 				}
 			}
-		}
-
-		std::unordered_map<uint32_t, std::vector<uint32_t>> grouped_A;
-		for (auto &x : changed_nbrs) {
-			grouped_A[get_target_rank(x)].push_back(x);
+			std::unordered_map<uint32_t, std::vector<uint32_t>> grouped_A;
+			for (auto &x : changed_nbrs) {
+				grouped_A[get_target_rank(x)].push_back(x);
+			}
+			sparc::map_to_blocks(requests, grouped_A, (uint32_t) 1000, true);
 		}
 
 		upcxx::future<> fut_all = upcxx::make_future();
-
-		for (auto &kv : grouped_A) {
+		i = 0;
+		for (auto &kv : requests) {
 			uint32_t target_rank = kv.first;
 			auto &va = kv.second;
 			upcxx::future<> fut = upcxx::rpc(target_rank,
@@ -248,6 +251,11 @@ public:
 			fut_all = upcxx::when_all(fut_all, fut);
 			if (i++ % 10 == 0) {
 				upcxx::progress();
+			}
+			if (i >= upcxx::rank_me()) {
+				fut_all.wait();
+				fut_all = upcxx::make_future();
+				i = 0;
 			}
 		}
 		fut_all.wait();
@@ -272,13 +280,13 @@ public:
 						std::unordered_map<uint32_t, uint32_t> local_labels;
 						for (auto it1 = va.begin(); it1 != va.end(); it1++) {
 							auto l = lmap->operator[](*it1).label;
-							local_labels[*it1]=l;
+							local_labels[*it1] = l;
 						}
 						return local_labels;
-					} , local_map, upcxx::make_view(va.begin(), va.end())).then(
-					[&labels](std::unordered_map<uint32_t, uint32_t>  m) {
-						for(auto& a: m){
-							labels[a.first]=a.second;
+					}, local_map, upcxx::make_view(va.begin(), va.end())).then(
+					[&labels](std::unordered_map<uint32_t, uint32_t> m) {
+						for (auto &a : m) {
+							labels[a.first] = a.second;
 						}
 					});
 

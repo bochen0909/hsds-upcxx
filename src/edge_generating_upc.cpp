@@ -223,7 +223,7 @@ int process_krm_file(int iteration, int n_interation,
 			map_line(iteration, n_interation, line, min_shared_kmers,
 					max_degree, edges);
 			if (edges.size() >= KMER_SEND_BATCH_SIZE) {
-				g_map->incr(edges);
+				g_map->incr(edges).wait();
 				edges.clear();
 			}
 		}
@@ -234,13 +234,13 @@ int process_krm_file(int iteration, int n_interation,
 			map_line(iteration, n_interation, line, min_shared_kmers,
 					max_degree, edges);
 			if (edges.size() >= KMER_SEND_BATCH_SIZE) {
-				g_map->incr(edges);
+				g_map->incr(edges).wait();
 				edges.clear();
 			}
 		}
 	}
 	if (edges.size() > 0) {
-		g_map->incr(edges);
+		g_map->incr(edges).wait();
 		edges.clear();
 	}
 

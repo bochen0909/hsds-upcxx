@@ -207,6 +207,13 @@ inline void map_line(int iteration, int n_interation, const std::string &line,
 			}
 			string s = ss.str();
 			edges_output.push_back(s);
+
+			if (edges_output.size() >= KMER_SEND_BATCH_SIZE) {
+				g_map->incr(edges_output).wait();
+				edges_output.clear();
+			}
+
+
 			g_n_sent++;
 		}
 	}
@@ -222,10 +229,6 @@ int process_krm_file(int iteration, int n_interation,
 		while (std::getline(file, line)) {
 			map_line(iteration, n_interation, line, min_shared_kmers,
 					max_degree, edges);
-			if (edges.size() >= KMER_SEND_BATCH_SIZE) {
-				g_map->incr(edges).wait();
-				edges.clear();
-			}
 		}
 	} else {
 		std::ifstream file(filepath);
@@ -233,10 +236,6 @@ int process_krm_file(int iteration, int n_interation,
 		while (std::getline(file, line)) {
 			map_line(iteration, n_interation, line, min_shared_kmers,
 					max_degree, edges);
-			if (edges.size() >= KMER_SEND_BATCH_SIZE) {
-				g_map->incr(edges).wait();
-				edges.clear();
-			}
 		}
 	}
 	if (edges.size() > 0) {

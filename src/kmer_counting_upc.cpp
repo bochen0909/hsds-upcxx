@@ -170,12 +170,6 @@ inline void map_line(const string &line, int kmer_length,
 	for (size_t i = 0; i < v.size(); i++) {
 		std::string s = kmer_to_base64(v[i]);
 		kmers.push_back(s);
-
-		if (kmers.size() >= KMER_SEND_BATCH_SIZE) {
-			g_map->incr(kmers).wait();
-			kmers.clear();
-		}
-
 		g_n_sent++;
 	}
 }
@@ -189,6 +183,10 @@ int process_seq_file(const std::string &filepath, int kmer_length,
 		std::string line;
 		while (std::getline(file, line)) {
 			map_line(line, kmer_length, without_canonical_kmer, kmers);
+			if (kmers.size() >= KMER_SEND_BATCH_SIZE) {
+				g_map->incr(kmers).wait();
+				kmers.clear();
+			}
 			upcxx::progress();
 		}
 	} else {
@@ -196,6 +194,10 @@ int process_seq_file(const std::string &filepath, int kmer_length,
 		std::string line;
 		while (std::getline(file, line)) {
 			map_line(line, kmer_length, without_canonical_kmer, kmers);
+			if (kmers.size() >= KMER_SEND_BATCH_SIZE) {
+				g_map->incr(kmers).wait();
+				kmers.clear();
+			}
 			upcxx::progress();
 		}
 	}

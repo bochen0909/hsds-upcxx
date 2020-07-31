@@ -69,9 +69,6 @@ public:
 						}
 					, local_map, upcxx::make_view(v.begin(), v.end()));
 			fut_all = upcxx::when_all(fut_all, fut);
-			if (i++ % 10 == 0) {
-				upcxx::progress();
-			}
 		}
 		return fut_all;
 	}

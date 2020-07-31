@@ -229,6 +229,7 @@ int process_krm_file(int iteration, int n_interation,
 		while (std::getline(file, line)) {
 			map_line(iteration, n_interation, line, min_shared_kmers,
 					max_degree, edges);
+			upcxx::progress();
 		}
 	} else {
 		std::ifstream file(filepath);
@@ -236,6 +237,7 @@ int process_krm_file(int iteration, int n_interation,
 		while (std::getline(file, line)) {
 			map_line(iteration, n_interation, line, min_shared_kmers,
 					max_degree, edges);
+			upcxx::progress();
 		}
 	}
 	if (edges.size() > 0) {

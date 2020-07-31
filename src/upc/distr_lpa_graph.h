@@ -99,6 +99,55 @@ public:
 
 	}
 
+	upcxx::future<> add_edges(
+			std::vector<std::tuple<uint32_t, uint32_t, float>> &edges) {
+		std::unordered_map<uint32_t, std::vector<uint32_t>> grouped_A;
+		std::unordered_map<uint32_t, std::vector<uint32_t>> grouped_B;
+		std::unordered_map<uint32_t, std::vector<float>> grouped_W;
+		for (auto &x : edges) {
+			auto rank = get_target_rank(std::get<0>(x));
+			grouped_A[rank].push_back(std::get<0>(x));
+			grouped_B[rank].push_back(std::get<1>(x));
+			grouped_W[rank].push_back(std::get<2>(x));
+		}
+		for (auto &x : edges) {
+			auto rank = get_target_rank(std::get<1>(x));
+			grouped_A[rank].push_back(std::get<1>(x));
+			grouped_B[rank].push_back(std::get<0>(x));
+			grouped_W[rank].push_back(std::get<2>(x));
+		}
+
+		upcxx::future<> fut_all = upcxx::make_future();
+
+		uint32_t i = 0;
+		for (auto &kv : grouped_A) {
+			uint32_t target_rank = kv.first;
+			auto &va = kv.second;
+			auto &vb = grouped_B.at(target_rank);
+			auto &vw = grouped_W.at(target_rank);
+			upcxx::future<> fut = upcxx::rpc(target_rank,
+					[](dobj_map_t &lmap, upcxx::view<uint32_t> va,
+							upcxx::view<uint32_t> vb, upcxx::view<float> vw) {
+						auto it1 = va.begin();
+						auto it2 = vb.begin();
+						auto it3 = vw.begin();
+						for (; it1 != va.end(); it1++, it2++, it3++) {
+							auto &node = lmap->operator[](*it1);
+							node.neighbors.push_back( { *it2, *it3 });
+						}
+					}
+
+					, local_map, upcxx::make_view(va.begin(), va.end()),
+					upcxx::make_view(vb.begin(), vb.end()),
+					upcxx::make_view(vw.begin(), vw.end()));
+			fut_all = upcxx::when_all(fut_all, fut);
+			if (i++ % 10 == 0) {
+				upcxx::progress();
+			}
+		}
+		return fut_all;
+	}
+
 	upcxx::future<uint32_t> get_label(const uint32_t &node) {
 		return upcxx::rpc(get_target_rank(node),
 				[](dobj_map_t &lmap, uint32_t node) {
@@ -175,22 +224,71 @@ public:
 				}
 			}
 		}
-		{
-			upcxx::future<> fut_all = upcxx::make_future();
-			for (uint32_t nbr : changed_nbrs) {
 
-				auto fut = set_nbr_changed(nbr, true);
-				fut_all = upcxx::when_all(fut_all, fut);
-				if (i++ % 10 == 0) {
-					upcxx::progress();
-				}
-				if (i > (100 * upcxx::rank_n())) {
-					fut_all.wait();
-					fut_all = upcxx::make_future();
-				}
-			}
-			fut_all.wait();
+		std::unordered_map<uint32_t, std::vector<uint32_t>> grouped_A;
+		for (auto &x : changed_nbrs) {
+			grouped_A[get_target_rank(x)].push_back(x);
 		}
+
+		upcxx::future<> fut_all = upcxx::make_future();
+
+		for (auto &kv : grouped_A) {
+			uint32_t target_rank = kv.first;
+			auto &va = kv.second;
+			upcxx::future<> fut = upcxx::rpc(target_rank,
+					[](dobj_map_t &lmap, upcxx::view<uint32_t> va) {
+						auto it1 = va.begin();
+						for (; it1 != va.end(); it1++) {
+							auto &a = lmap->operator[](*it1);
+							a.nbr_changed = true;
+						}
+					}
+
+					, local_map, upcxx::make_view(va.begin(), va.end()));
+			fut_all = upcxx::when_all(fut_all, fut);
+			if (i++ % 10 == 0) {
+				upcxx::progress();
+			}
+		}
+		fut_all.wait();
+	}
+
+	upcxx::future<> get_labels(const std::unordered_set<uint32_t> &nodes,
+			std::unordered_map<size_t, size_t> &labels) {
+
+		std::unordered_map<uint32_t, std::vector<uint32_t>> grouped_A;
+		for (auto &x : nodes) {
+			grouped_A[get_target_rank(x)].push_back(x);
+		}
+
+		upcxx::future<> fut_all = upcxx::make_future();
+
+		uint32_t i = 0;
+		for (auto &kv : grouped_A) {
+			uint32_t target_rank = kv.first;
+			auto &va = kv.second;
+			upcxx::future<> fut = upcxx::rpc(target_rank,
+					[](dobj_map_t &lmap, upcxx::view<uint32_t> va) {
+						std::unordered_map<uint32_t, uint32_t> local_labels;
+						for (auto it1 = va.begin(); it1 != va.end(); it1++) {
+							auto l = lmap->operator[](*it1).label;
+							local_labels[*it1]=l;
+						}
+						return local_labels;
+					} , local_map, upcxx::make_view(va.begin(), va.end())).then(
+					[&labels](std::unordered_map<uint32_t, uint32_t>  m) {
+						for(auto& a: m){
+							labels[a.first]=a.second;
+						}
+					});
+
+			fut_all = upcxx::when_all(fut_all, fut);
+			if (i++ % 10 == 0) {
+				upcxx::progress();
+			}
+		}
+		return fut_all;
+
 	}
 
 	void query_and_update_nodes() {
@@ -215,27 +313,8 @@ public:
 			}
 		}
 
-		unordered_map<size_t, size_t> nbr_labels;
-		{
-			upcxx::future<> fut_all = upcxx::make_future();
-			uint32_t n = 0;
-			for (size_t nbr : local_changed_neighbors) {
-				auto fut = get_label(nbr).then([&nbr_labels, nbr](size_t l) {
-					nbr_labels[nbr] = l;
-				});
-				fut_all = upcxx::when_all(fut_all, fut);
-				if (n++ % 10 == 0) {
-					upcxx::progress();
-				}
-				if (n > 1000) {
-					fut_all.wait();
-					fut_all = upcxx::make_future();
-					n = 0;
-				}
-			}
-			fut_all.wait();
-			myinfo("Make %ld rpc calls", n);
-		}
+		std::unordered_map<size_t, size_t> nbr_labels;
+		get_labels(local_changed_neighbors, nbr_labels).wait();
 
 		//update local
 		for (size_t this_node : local_changed_nodes) {

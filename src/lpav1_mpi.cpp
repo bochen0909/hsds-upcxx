@@ -33,12 +33,12 @@ using namespace sparc;
 
 struct Config: public BaseConfig {
 	int n_iteration;
-	int smin;
+	uint32_t smin;
 	bool weighted;
 
 	void print() {
 		BaseConfig::print();
-		myinfo("config: smin=%d", smin);
+		myinfo("config: smin=%ld", smin);
 		myinfo("config: n_iteration=%d", n_iteration);
  	}
 };

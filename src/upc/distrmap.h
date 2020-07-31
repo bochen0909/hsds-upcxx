@@ -58,6 +58,7 @@ public:
 		}
 		upcxx::future<> fut_all = upcxx::make_future();
 
+		uint32_t i = 0;
 		for (auto &kv : grouped) {
 			uint32_t target_rank = kv.first;
 			std::vector<K> &v = kv.second;
@@ -68,6 +69,9 @@ public:
 						}
 					, local_map, upcxx::make_view(v.begin(), v.end()));
 			fut_all = upcxx::when_all(fut_all, fut);
+			if (i++ % 10 == 0) {
+				upcxx::progress();
+			}
 		}
 		return fut_all;
 	}
@@ -82,7 +86,7 @@ public:
 			grouped_V[key].push_back(a.second);
 		}
 		upcxx::future<> fut_all = upcxx::make_future();
-
+		uint32_t i = 0;
 		for (auto &kv : grouped_K) {
 			uint32_t target_rank = kv.first;
 			std::vector<K> &k = kv.second;
@@ -98,6 +102,10 @@ public:
 					}, local_map, upcxx::make_view(k.begin(), k.end()),
 					upcxx::make_view(v.begin(), v.end()));
 			fut_all = upcxx::when_all(fut_all, fut);
+			if (i++ % 10 == 0) {
+				upcxx::progress();
+			}
+
 		}
 		return fut_all;
 

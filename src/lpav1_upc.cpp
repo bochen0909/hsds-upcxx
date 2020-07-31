@@ -29,18 +29,20 @@
 using namespace std;
 using namespace sparc;
 
+#define KMER_SEND_BATCH_SIZE (1000*1000)
+
 DistrGraph *g_graph = 0;
 
 size_t g_n_sent = 0;
 
 struct Config: public BaseConfig {
 	int n_iteration;
-	int smin;
+	uint32_t smin;
 	bool weighted;
 
 	void print() {
 		BaseConfig::print();
-		myinfo("config: smin=%d", smin);
+		myinfo("config: smin=%ld", smin);
 		myinfo("config: n_iteration=%d", n_iteration);
 	}
 };
@@ -147,7 +149,7 @@ int main(int argc, char **argv) {
 }
 
 inline int pasrse_graph_file_line(const std::string &line, bool weighted,
-		upcxx::future<> &fut_all) {
+		std::vector<std::tuple<uint32_t, uint32_t, float>> &edges) {
 
 	if (line.empty()) {
 		return 0;
@@ -161,9 +163,7 @@ inline int pasrse_graph_file_line(const std::string &line, bool weighted,
 		if (weighted) {
 			ss >> w;
 		}
-
-		upcxx::future<> fut = g_graph->add_edge(a, b, w);
-		fut_all = upcxx::when_all(fut_all, fut);
+		edges.push_back( { a, b, w });
 		g_n_sent++;
 		return 2;
 	} else if ('#' == line.at(0)) {
@@ -175,40 +175,33 @@ inline int pasrse_graph_file_line(const std::string &line, bool weighted,
 }
 
 int process_graph_file(const std::string &filepath, bool weighted) {
-	upcxx::future<> fut_all = upcxx::make_future();
-	size_t n_line = 0;
-	size_t word_size = upcxx::rank_n();
+	std::vector<std::tuple<uint32_t, uint32_t, float>> edges;
 	if (sparc::endswith(filepath, ".gz")) {
 		igzstream file(filepath.c_str());
 		std::string line;
 		while (std::getline(file, line)) {
-			pasrse_graph_file_line(line, weighted, fut_all);
-			n_line++;
-			if (n_line % 10 == 0) {
-				upcxx::progress();
+			pasrse_graph_file_line(line, weighted, edges);
+			if (edges.size() >= KMER_SEND_BATCH_SIZE) {
+				g_graph->add_edges(edges).wait();
+				edges.clear();
 			}
-			if (n_line > word_size * 100) {
-				fut_all.wait();
-				fut_all = upcxx::make_future();
-			}
+
 		}
 	} else {
 		std::ifstream file(filepath);
 		std::string line;
 		while (std::getline(file, line)) {
-			pasrse_graph_file_line(line, weighted, fut_all);
-			n_line++;
-			if (n_line % 10 == 0) {
-				upcxx::progress();
-			}
-			if (n_line > word_size * 100) {
-				fut_all.wait();
-				fut_all = upcxx::make_future();
+			pasrse_graph_file_line(line, weighted, edges);
+			if (edges.size() >= KMER_SEND_BATCH_SIZE) {
+				g_graph->add_edges(edges).wait();
+				edges.clear();
 			}
 		}
 	}
-
-	fut_all.wait();
+	if (edges.size() > 0) {
+		g_graph->add_edges(edges).wait();
+		edges.clear();
+	}
 
 	return 0;
 }

@@ -29,7 +29,7 @@
 using namespace std;
 using namespace sparc;
 
-#define KMER_SEND_BATCH_SIZE (100*1000)
+#define KMER_SEND_BATCH_SIZE (10*1000)
 
 DistrMap<std::string, uint32_t> *g_map = 0;
 size_t g_n_sent = 0;

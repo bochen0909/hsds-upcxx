@@ -38,211 +38,7 @@ add_custom_target(sparc_mpi ALL)
 add_custom_target(sparc_upcxx)
 add_custom_target(sparc_bcl)
 
-########## external project ##################
-
-include(ExternalProject)
-
-
-
-ExternalProject_Add(mrmpilib
-  SOURCE_DIR ${PROJECT_SOURCE_DIR}/extlib/mrmpi-7Apr14/src
-  INSTALL_DIR ${LOCAL_EXT_PREFIX_DIR}
-  BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND  "" 
-  BUILD_COMMAND  make 
-  INSTALL_COMMAND  INSTALL_DIR=<INSTALL_DIR> make install
-)
-set_target_properties(mrmpilib PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
-ExternalProject_Add(mimirlib
-  SOURCE_DIR ${PROJECT_SOURCE_DIR}/extlib/Mimir/
-  INSTALL_DIR ${LOCAL_EXT_PREFIX_DIR}
-  BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND  ./autogen.sh 
-  BUILD_COMMAND  ./configure --prefix <INSTALL_DIR> && make 
-  INSTALL_COMMAND  make install
-)
-set_target_properties(mimirlib PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
-ExternalProject_Add(gzstreamlib
-  PREFIX ${PROJECT_SOURCE_DIR}/extlib
-  URL ${PROJECT_SOURCE_DIR}/extlib/gzstream.tgz
-  INSTALL_DIR ${LOCAL_EXT_PREFIX_DIR}
-  BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND  "" 
-  BUILD_COMMAND  make 
-  INSTALL_COMMAND  mkdir -p <INSTALL_DIR>/include && mkdir -p <INSTALL_DIR>/lib && cp gzstream.h <INSTALL_DIR>/include && cp libgzstream.a <INSTALL_DIR>/lib
-  )
-set_target_properties(gzstreamlib PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
-
-ExternalProject_Add(bcllib
-  PREFIX ${PROJECT_SOURCE_DIR}/extlib
-  GIT_REPOSITORY https://github.com/berkeley-container-library/bcl.git
-  GIT_TAG 1b9c4560b18b6e8a82ecf4043cb60bfe0d0b0a50
-  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
-  BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND  "" 
-  BUILD_COMMAND  ""  
-  INSTALL_COMMAND  mkdir -p <INSTALL_DIR>/include && cp -r bcl <INSTALL_DIR>/include  
-  )
-set_target_properties(bcllib PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
-ExternalProject_Add(Sandia_OpenSHMEM_lib
-  PREFIX ${PROJECT_SOURCE_DIR}/extlib
-  GIT_REPOSITORY https://github.com/Sandia-OpenSHMEM/SOS.git
-  GIT_TAG v1.4.5
-  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
-  BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND  test -f ./configure || ./autogen.sh && ./configure --enable-pmi-simple --disable-shared --prefix <INSTALL_DIR>   
-  BUILD_COMMAND  make
-  INSTALL_COMMAND  make install  
-  )
-set_target_properties(Sandia_OpenSHMEM_lib PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
-ExternalProject_Add(spdloglib
-  PREFIX ${PROJECT_SOURCE_DIR}/extlib
-  GIT_REPOSITORY https://github.com/gabime/spdlog.git
-  GIT_TAG v1.7.0
-  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
-  BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND  "" 
-  BUILD_COMMAND  mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>  ..  
-  INSTALL_COMMAND  cd build && make install 
-  )
-set_target_properties(spdloglib PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
-ExternalProject_Add(tsl_robin_map_lib
-  PREFIX ${PROJECT_SOURCE_DIR}/extlib
-  GIT_REPOSITORY https://github.com/Tessil/robin-map.git
-  GIT_TAG v0.6.3
-  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
-  BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND  "" 
-  BUILD_COMMAND  mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>  ..  
-  INSTALL_COMMAND  cd build && make install 
-  )
-set_target_properties(tsl_robin_map_lib PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
-ExternalProject_Add(libzmq
-  PREFIX ${PROJECT_SOURCE_DIR}/extlib
-  GIT_REPOSITORY https://github.com/zeromq/libzmq.git
-  GIT_TAG v4.3.2
-  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
-  BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND  "" 
-  BUILD_COMMAND  mkdir -p build && cd build && cmake  -DBUILD_SHARED=OFF -DBUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>  ..  
-  INSTALL_COMMAND  cd build && make install 
-  )
-set_target_properties(libzmq PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
-ExternalProject_Add(cppzmqlib
-  DEPENDS libzmq
-  PREFIX ${PROJECT_SOURCE_DIR}/extlib
-  GIT_REPOSITORY https://github.com/zeromq/cppzmq.git
-  GIT_TAG v4.6.0
-  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
-  BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND  "" 
-  BUILD_COMMAND  mkdir -p build && cd build && cmake  -DCPPZMQ_BUILD_TESTS=OFF -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>  ..  
-  INSTALL_COMMAND  cd build && make install 
-  )
-set_target_properties(cppzmqlib PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
-ExternalProject_Add(zmqpplib
-  DEPENDS libzmq
-  PREFIX ${PROJECT_SOURCE_DIR}/extlib
-  GIT_REPOSITORY https://github.com/zeromq/zmqpp.git
-  GIT_TAG 4.2.0
-  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
-  BUILD_IN_SOURCE 1
-  PATCH_COMMAND git apply ${PROJECT_SOURCE_DIR}/patch/zmqpp.patch
-  CONFIGURE_COMMAND  "" 
-  BUILD_COMMAND 
-  make CXXFLAGS=-I<INSTALL_DIR>/include   libzmqpp.a   
-  INSTALL_COMMAND make install PREFIX=<INSTALL_DIR> BUILD_SHARED=NO 
-  )
-set_target_properties(zmqpplib PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
-ExternalProject_Add(snappylib
-  PREFIX ${PROJECT_SOURCE_DIR}/extlib
-  GIT_REPOSITORY https://github.com/google/snappy.git
-  GIT_TAG 1.1.8
-  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
-  BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND  "" 
-  BUILD_COMMAND  mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> .. && make 
-  INSTALL_COMMAND  cd build && make install 
-  )
-set_target_properties(snappylib PROPERTIES EXCLUDE_FROM_ALL TRUE)
-  
-ExternalProject_Add(lz4lib
-  PREFIX ${PROJECT_SOURCE_DIR}/extlib
-  GIT_REPOSITORY https://github.com/lz4/lz4.git
-  GIT_TAG v1.9.2
-  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
-  BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND  "" 
-  BUILD_COMMAND  ""  
-  INSTALL_COMMAND  cd lib && make install BUILD_SHARED=no PREFIX=<INSTALL_DIR> 
-  )
-set_target_properties(lz4lib PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
-
-
-ExternalProject_Add(openshmemlib
-  PREFIX ${PROJECT_SOURCE_DIR}/extlib
-  URL http://openshmem.org/site/sites/default/site_files/openshmem-release-1.2.tar.bz2
-  URL_MD5 f908dc960edfae92a8771dd57a6a1490
-  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
-  BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND  ./configure --prefix=<INSTALL_DIR> 
-  BUILD_COMMAND ""
-  INSTALL_COMMAND  make install 
-  )
-set_target_properties(openshmemlib PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
-
-ExternalProject_Add(rocksdblib
-  DEPENDS lz4lib snappylib
-  PREFIX ${PROJECT_SOURCE_DIR}/extlib
-  URL  https://github.com/facebook/rocksdb/archive/v6.10.2.tar.gz
-  URL_MD5 f1c5debbb2bdaaf275309e1d78839fb2
-  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
-  BUILD_IN_SOURCE 1
-  CONFIGURE_COMMAND  "" 
-  BUILD_COMMAND
-  test -f DONE ||  
-  ROCKSDB_DISABLE_BZIP=1 ROCKSDB_DISABLE_ZLIB=1 
-  CFLAGS=-I<INSTALL_DIR>/include PLATFORM_LDFLAGS=-L<INSTALL_DIR>/lib
-  make static_lib AM_DEFAULT_VERBOSITY=1 -j4  && touch DONE
-  INSTALL_COMMAND  test -f DONE2 || make install-static INSTALL_PATH=<INSTALL_DIR> && touch DONE2 
-  )
-set_target_properties(rocksdblib PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
-ExternalProject_Add(leveldblib
-  DEPENDS snappylib
-  PREFIX ${PROJECT_SOURCE_DIR}/extlib
-  GIT_REPOSITORY https://github.com/google/leveldb.git
-  GIT_TAG 1.22
-  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
-  BUILD_IN_SOURCE 1
-  PATCH_COMMAND git apply ${PROJECT_SOURCE_DIR}/patch/leveldb.patch
-  CONFIGURE_COMMAND  "" 
-  BUILD_COMMAND  
-  mkdir -p build && cd build && 
-  cmake -DCMAKE_BUILD_TYPE=Release
-  -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-  -DCMAKE_CC_COMPILER=${CMAKE_CC_COMPILER}
-  -DLEVELDB_BUILD_TESTS=OFF
-  -DLEVELDB_BUILD_BENCHMARKS=OFF
-  -DLOCAL_PREFIX_PATH=<INSTALL_DIR>
-  -DCMAKE_EXE_LINKER_FLAGS=-L<INSTALL_DIR>/lib64
-  -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> .. && make 
-  INSTALL_COMMAND  cd build && make install 
-  )
-set_target_properties(leveldblib PROPERTIES EXCLUDE_FROM_ALL TRUE)
-
+include(cmake/CMakefile.external)
 
 ######### sparc mpi ##########################
 
@@ -446,28 +242,28 @@ if(BUILD_SPARC_UPCXX)
 	link_directories( "${LOCAL_EXT_PREFIX_DIR}/lib" )
 	link_directories( "${LOCAL_EXT_PREFIX_DIR}/lib64" )
 
-	add_executable(edge_generating_upc 
-		src/edge_generating_upc.cpp 
+	add_executable(edge_generating_upcxx 
+		src/edge_generating_upcxx.cpp 
 		src/kmer.cpp src/sparc/log.cpp src/sparc/utils.cpp
 		)
 
-	add_executable(kmer_counting_upc 
-		src/kmer_counting_upc.cpp 
+	add_executable(kmer_counting_upcxx 
+		src/kmer_counting_upcxx.cpp 
 		src/kmer.cpp src/sparc/log.cpp src/sparc/utils.cpp
 		)
 	
-	add_executable(kmer_read_mapping_upc 
-		src/kmer_read_mapping_upc.cpp 
+	add_executable(kmer_read_mapping_upcxx 
+		src/kmer_read_mapping_upcxx.cpp 
 		src/kmer.cpp src/sparc/log.cpp src/sparc/utils.cpp
 		)
 
-	add_executable(lpav1_upc 
-		src/lpav1_upc.cpp 
+	add_executable(lpav1_upcxx
+		src/lpav1_upcxx.cpp 
 		src/kmer.cpp src/sparc/log.cpp src/sparc/utils.cpp
 		)
 
 						
-	foreach(EXEC edge_generating_upc kmer_counting_upc kmer_read_mapping_upc lpav1_upc)
+	foreach(EXEC edge_generating_upcxx kmer_counting_upcxx kmer_read_mapping_upcxx lpav1_upcxx)
 		add_dependencies(${EXEC} spdloglib gzstreamlib)
 		target_include_directories(${EXEC} PUBLIC ${UPCXX_INCLUDE_DIRS} "${LOCAL_EXT_PREFIX_DIR}/include" )
 		target_compile_definitions(${EXEC} PUBLIC ${UPCXX_DEFINITIONS})

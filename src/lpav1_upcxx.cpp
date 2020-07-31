@@ -23,8 +23,8 @@
 #include "kmer.h"
 #include "sparc/log.h"
 #include "sparc/config.h"
-#include "upc/upchelper.h"
-#include "upc/distr_lpa_graph.h"
+#include "upcxx/distr_lpa_graph.h"
+#include "upcxx/upchelper.h"
 
 using namespace std;
 using namespace sparc;

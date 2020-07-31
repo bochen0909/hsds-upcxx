@@ -28,6 +28,8 @@
 #include "upc/upchelper.h"
 #include "upc/distrmap.h"
 
+#define KMER_SEND_BATCH_SIZE (100*1000)
+
 using namespace std;
 using namespace sparc;
 
@@ -151,7 +153,8 @@ int main(int argc, char **argv) {
 }
 
 inline void map_line(const string &line, int kmer_length,
-		bool without_canonical_kmer) {
+		bool without_canonical_kmer,
+		std::vector<std::pair<std::string, std::string>> &kmers) {
 	std::vector<std::string> arr;
 	split(arr, line, "\t");
 	if (arr.empty()) {
@@ -163,39 +166,49 @@ inline void map_line(const string &line, int kmer_length,
 	}
 	string seq = arr.at(2);
 	trim(seq);
-	string nodeid = arr.at(0);
-	trim(nodeid);
+	string nodeid = trim_copy(arr.at(0));
 
 	std::vector<std::string> v = generate_kmer(seq, kmer_length, "N",
 			!without_canonical_kmer);
-	upcxx::future<> fut_all = upcxx::make_future();
+
 	for (size_t i = 0; i < v.size(); i++) {
 		std::string s = kmer_to_base64(v[i]);
-		auto fut = g_map->value_set_insert(s, nodeid);
-		fut_all = upcxx::when_all(fut_all, fut);
+		kmers.push_back( { s, nodeid });
 		g_n_sent++;
-		if (i % 10 == 0) {
-			upcxx::progress();
-		}
 	}
-	fut_all.wait();
 }
 
 int process_seq_file(const std::string &filepath, int kmer_length,
 		bool without_canonical_kmer) {
+	std::vector<std::pair<std::string, std::string>> kmers;
 	if (endswith(filepath, ".gz")) {
 		igzstream file(filepath.c_str());
 		std::string line;
 		while (std::getline(file, line)) {
-			map_line(line, kmer_length, without_canonical_kmer);
+			map_line(line, kmer_length, without_canonical_kmer, kmers);
+			if (kmers.size() >= KMER_SEND_BATCH_SIZE) {
+				g_map->value_set_insert(kmers).wait();
+				kmers.clear();
+			}
+			upcxx::progress();
 		}
 	} else {
 		std::ifstream file(filepath);
 		std::string line;
 		while (std::getline(file, line)) {
-			map_line(line, kmer_length, without_canonical_kmer);
+			map_line(line, kmer_length, without_canonical_kmer, kmers);
+			if (kmers.size() >= KMER_SEND_BATCH_SIZE) {
+				g_map->value_set_insert(kmers).wait();
+				kmers.clear();
+			}
+			upcxx::progress();
 		}
 	}
+	if (kmers.size() > 0) {
+		g_map->value_set_insert(kmers).wait();
+		kmers.clear();
+	}
+	upcxx::progress();
 
 	return 0;
 }

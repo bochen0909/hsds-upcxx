@@ -64,12 +64,43 @@ public:
 			upcxx::future<> fut = upcxx::rpc(target_rank,
 					[](dobj_map_t &lmap, upcxx::view<K> val) {
 						for (auto a : val) {
-							lmap->operator[](a)++;
+							lmap->operator[](a)++;}
 						}
-					}, local_map, upcxx::make_view(v.begin(),v.end()));
+					, local_map, upcxx::make_view(v.begin(), v.end()));
 			fut_all = upcxx::when_all(fut_all, fut);
 		}
 		return fut_all;
+	}
+
+	template<typename PairV> upcxx::future<> value_set_insert(
+			const std::vector<std::pair<K, PairV>> &values) {
+		unordered_map<uint32_t, std::vector<K> > grouped_K;
+		unordered_map<uint32_t, std::vector<PairV> > grouped_V;
+		for (const std::pair<K, PairV> &a : values) {
+			auto key = get_target_rank(a.first);
+			grouped_K[key].push_back(a.first);
+			grouped_V[key].push_back(a.second);
+		}
+		upcxx::future<> fut_all = upcxx::make_future();
+
+		for (auto &kv : grouped_K) {
+			uint32_t target_rank = kv.first;
+			std::vector<K> &k = kv.second;
+			std::vector<PairV> &v = grouped_V.at(target_rank);
+			upcxx::future<> fut = upcxx::rpc(target_rank,
+					[](dobj_map_t &lmap, upcxx::view<K> keys,
+							upcxx::view<PairV> vals) {
+						auto it1 = keys.begin();
+						auto it2 = vals.begin();
+						for (; it1 != keys.end(); it1++, it2++) {
+							lmap->operator[](*it1).insert(*it2);
+						}
+					}, local_map, upcxx::make_view(k.begin(), k.end()),
+					upcxx::make_view(v.begin(), v.end()));
+			fut_all = upcxx::when_all(fut_all, fut);
+		}
+		return fut_all;
+
 	}
 
 	template<typename SetV> upcxx::future<> value_set_insert(const K &key,

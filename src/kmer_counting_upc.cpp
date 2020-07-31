@@ -170,6 +170,7 @@ inline void map_line(const string &line, int kmer_length,
 	for (size_t i = 0; i < v.size(); i++) {
 		std::string s = kmer_to_base64(v[i]);
 		kmers.push_back(s);
+		g_n_sent++;
 	}
 }
 

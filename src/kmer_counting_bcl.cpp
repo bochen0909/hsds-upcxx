@@ -1,8 +1,8 @@
 /*
- * kmer_counting_upc.cpp
+ * kmer_counting_bcl.cpp
  *
- *  Created on: Jul 29, 2020
- *      Author:
+ *  Created on: Jul 30, 2020
+ *      Author: bo
  */
 
 #include <string>
@@ -15,7 +15,9 @@
 #include <string>
 #include <iostream>
 #include <unistd.h>
-#include <upcxx/upcxx.hpp>
+
+#include <bcl/bcl.hpp>
+#include <bcl/containers/HashMap.hpp>
 
 #include "argagg.hpp"
 #include "gzstream.h"
@@ -23,14 +25,14 @@
 #include "kmer.h"
 #include "sparc/log.h"
 #include "sparc/config.h"
-#include "upc/upchelper.h"
-#include "upc/distrmap.h"
+#include "bcl/bclhelper.h"
 
 using namespace std;
 using namespace sparc;
 #define KMER_SEND_BATCH_SIZE (100*1000)
 
-DistrMap<std::string, uint32_t> *g_map = 0;
+BCL::HashMap<std::string, uint32_t> *g_map = 0;
+
 size_t g_n_sent = 0;
 
 struct Config: public BaseConfig {
@@ -55,12 +57,12 @@ void check_arg(argagg::parser_results &args, char *name) {
 int run(const std::vector<std::string> &input, Config &config);
 
 int main(int argc, char **argv) {
-	upcxx::init();
+	BCL::init();
 
 	Config config;
 	config.program = argv[0];
-	config.rank = upcxx::rank_me();
-	config.nprocs = upcxx::rank_n();
+	config.rank = BCL::rank();
+	config.nprocs = BCL::nprocs();
 	config.mpi_hostname = sparc::get_hostname();
 	set_spdlog_pattern(config.mpi_hostname.c_str(), config.rank);
 
@@ -124,16 +126,16 @@ int main(int argc, char **argv) {
 		return EXIT_FAILURE;
 	}
 
-	upcxx::barrier();
+	BCL::barrier();
 
-	if (upcxx::rank_me() == 0) {
+	if (BCL::rank() == 0) {
 		if (dir_exists(outputpath.c_str())) {
 			cerr << "Error, output dir exists:  " << outputpath << endl;
 			return EXIT_FAILURE;
 		}
 	}
 
-	if (upcxx::rank_me() == 0) {
+	if (BCL::rank() == 0) {
 		if (make_dir(outputpath.c_str()) < 0) {
 			cerr << "Error, mkdir dir failed for " << outputpath << endl;
 			return EXIT_FAILURE;
@@ -144,7 +146,7 @@ int main(int argc, char **argv) {
 
 	myinfo("#of my inputs = %ld", myinput.size());
 	run(myinput, config);
-	upcxx::finalize();
+	BCL::finalize();
 
 	return 0;
 }
@@ -173,6 +175,14 @@ inline void map_line(const string &line, int kmer_length,
 	}
 }
 
+void update_batch(std::vector<std::string> &kmers) {
+	for (auto &s : kmers) {
+		g_map->operator[](s) = g_map->operator[](s) + 1;
+		g_n_sent++;
+	}
+	kmers.clear();
+}
+
 int process_seq_file(const std::string &filepath, int kmer_length,
 		bool without_canonical_kmer) {
 
@@ -183,10 +193,8 @@ int process_seq_file(const std::string &filepath, int kmer_length,
 		while (std::getline(file, line)) {
 			map_line(line, kmer_length, without_canonical_kmer, kmers);
 			if (kmers.size() >= KMER_SEND_BATCH_SIZE) {
-				g_map->incr(kmers).wait();
-				kmers.clear();
+				update_batch(kmers);
 			}
-			upcxx::progress();
 		}
 	} else {
 		std::ifstream file(filepath);
@@ -194,18 +202,46 @@ int process_seq_file(const std::string &filepath, int kmer_length,
 		while (std::getline(file, line)) {
 			map_line(line, kmer_length, without_canonical_kmer, kmers);
 			if (kmers.size() >= KMER_SEND_BATCH_SIZE) {
-				g_map->incr(kmers).wait();
-				kmers.clear();
+				update_batch(kmers);
 			}
-			upcxx::progress();
 		}
 	}
 	if (kmers.size() > 0) {
-		g_map->incr(kmers).wait();
-		kmers.clear();
+		update_batch(kmers);
 	}
 
 	return 0;
+}
+
+int dump(const std::string &filepath, char sep) {
+	int stat = 0;
+	std::ostream *myfile_pointer = 0;
+	if (sparc::endswith(filepath, ".gz")) {
+		myfile_pointer = new ogzstream(filepath.c_str());
+
+	} else {
+		myfile_pointer = new std::ofstream(filepath.c_str());
+	}
+	std::ostream &myfile = *myfile_pointer;
+
+	uint64_t n = 0;
+	BCL::LocalHashMapIterator<BCL::HashMap<std::string, uint32_t>> itor =
+			g_map->local_begin();
+	for (; itor != g_map->local_end(); itor++) {
+		BCL::HashMap<std::string, uint32_t>::value_type kv = (*itor);
+		myfile << kv.first << sep << kv.second << std::endl;
+		++n;
+	}
+
+	if (sparc::endswith(filepath, ".gz")) {
+		((ogzstream&) myfile).close();
+	} else {
+		((std::ofstream&) myfile).close();
+	}
+	delete myfile_pointer;
+	myinfo("Wrote %ld records", n);
+	return stat;
+
 }
 
 int run(const std::vector<std::string> &input, Config &config) {
@@ -213,7 +249,7 @@ int run(const std::vector<std::string> &input, Config &config) {
 		config.print();
 	}
 
-	g_map = new DistrMap<std::string, uint32_t>();
+	g_map = new BCL::HashMap<std::string, uint32_t>(BCL::nprocs() * 1000);
 
 	for (size_t i = 0; i < input.size(); i++) {
 		myinfo("processing %s", input.at(i).c_str());
@@ -221,13 +257,11 @@ int run(const std::vector<std::string> &input, Config &config) {
 				config.without_canonical_kmer);
 	}
 
-	upcxx::barrier();
+	BCL::barrier();
 
 	myinfo("Total sent %ld kmers", g_n_sent);
 
-	g_map->dump(config.get_my_output(), '\t', [](uint32_t v) {
-		return v;
-	});
+	dump(config.get_my_output(), '\t');
 
 	delete g_map;
 

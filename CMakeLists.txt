@@ -5,7 +5,7 @@ project(Sparc-MPI VERSION 0.1.0 LANGUAGES CXX)
 #specify the C++ standard
 set(CMAKE_STANDARD 11)
 set(CMAKE_STANDARD_REQUIRED True)
-set (CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -21,20 +21,28 @@ option(BUILD_SPARC_MIMIR "build Mimir version of Sparc" ON)
 option(BUILD_SPARC_MRMPI "build MR-MPI version of Sparc" ON)
 option(BUILD_SPARC_MPI "build pure MPI version of Sparc" ON)
 option(BUILD_SPARC_UPCXX "build UPCXX version of Sparc" ON)
+option(BUILD_SPARC_BCL "build bcl version of Sparc" ON)
 
 option(BUILD_WITH_LEVELDB "build MPI version of Sparc with leveldb support" OFF)
 option(BUILD_WITH_MPIClient "build MPI version of Sparc with mpi client" OFF)
 
+if(NOT DEFINED BCL_BACKEND)
+	set(BCL_BACKEND mpi) #mpi, shmem, gasnet_ex, upcxx,
+endif()
+
 set(LOCAL_EXT_PREFIX_DIR ${PROJECT_SOURCE_DIR}/extlib/local)       
 
-add_custom_target(sparc_mimir ALL)
-add_custom_target(sparc_mrmpi ALL)
+add_custom_target(sparc_mimir)
+add_custom_target(sparc_mrmpi)
 add_custom_target(sparc_mpi ALL)
-add_custom_target(sparc_upcxx ALL)
+add_custom_target(sparc_upcxx)
+add_custom_target(sparc_bcl)
 
 ########## external project ##################
 
 include(ExternalProject)
+
+
 
 ExternalProject_Add(mrmpilib
   SOURCE_DIR ${PROJECT_SOURCE_DIR}/extlib/mrmpi-7Apr14/src
@@ -67,6 +75,30 @@ ExternalProject_Add(gzstreamlib
   )
 set_target_properties(gzstreamlib PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
+
+ExternalProject_Add(bcllib
+  PREFIX ${PROJECT_SOURCE_DIR}/extlib
+  GIT_REPOSITORY https://github.com/berkeley-container-library/bcl.git
+  GIT_TAG 1b9c4560b18b6e8a82ecf4043cb60bfe0d0b0a50
+  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
+  BUILD_IN_SOURCE 1
+  CONFIGURE_COMMAND  "" 
+  BUILD_COMMAND  ""  
+  INSTALL_COMMAND  mkdir -p <INSTALL_DIR>/include && cp -r bcl <INSTALL_DIR>/include  
+  )
+set_target_properties(bcllib PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
+ExternalProject_Add(Sandia_OpenSHMEM_lib
+  PREFIX ${PROJECT_SOURCE_DIR}/extlib
+  GIT_REPOSITORY https://github.com/Sandia-OpenSHMEM/SOS.git
+  GIT_TAG v1.4.5
+  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
+  BUILD_IN_SOURCE 1
+  CONFIGURE_COMMAND  test -f ./configure || ./autogen.sh && ./configure --enable-pmi-simple --disable-shared --prefix <INSTALL_DIR>   
+  BUILD_COMMAND  make
+  INSTALL_COMMAND  make install  
+  )
+set_target_properties(Sandia_OpenSHMEM_lib PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
 ExternalProject_Add(spdloglib
   PREFIX ${PROJECT_SOURCE_DIR}/extlib
@@ -155,6 +187,21 @@ ExternalProject_Add(lz4lib
   INSTALL_COMMAND  cd lib && make install BUILD_SHARED=no PREFIX=<INSTALL_DIR> 
   )
 set_target_properties(lz4lib PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
+
+
+ExternalProject_Add(openshmemlib
+  PREFIX ${PROJECT_SOURCE_DIR}/extlib
+  URL http://openshmem.org/site/sites/default/site_files/openshmem-release-1.2.tar.bz2
+  URL_MD5 f908dc960edfae92a8771dd57a6a1490
+  INSTALL_DIR ${PROJECT_SOURCE_DIR}/extlib/local
+  BUILD_IN_SOURCE 1
+  CONFIGURE_COMMAND  ./configure --prefix=<INSTALL_DIR> 
+  BUILD_COMMAND ""
+  INSTALL_COMMAND  make install 
+  )
+set_target_properties(openshmemlib PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
 
 ExternalProject_Add(rocksdblib
   DEPENDS lz4lib snappylib
@@ -424,14 +471,75 @@ if(BUILD_SPARC_UPCXX)
 		add_dependencies(${EXEC} spdloglib gzstreamlib)
 		target_include_directories(${EXEC} PUBLIC ${UPCXX_INCLUDE_DIRS} "${LOCAL_EXT_PREFIX_DIR}/include" )
 		target_compile_definitions(${EXEC} PUBLIC ${UPCXX_DEFINITIONS})
-		target_compile_definitions(merge_intrmed_mpi PUBLIC "-DUSE_UPCXXCLIENT")
-                target_link_libraries(${EXEC} PUBLIC ${MPI_CXX_LIBRARIES})
+		target_compile_definitions(${EXEC} PUBLIC "-DUSE_UPCXXCLIENT")
+        target_link_libraries(${EXEC} PUBLIC ${MPI_CXX_LIBRARIES})
 		target_link_libraries(${EXEC} PUBLIC spdlog gzstream ZLIB::ZLIB ${UPCXX_LIBRARIES})
 	    set_target_properties(${EXEC} PROPERTIES EXCLUDE_FROM_ALL TRUE)
 	    add_dependencies(sparc_upcxx ${EXEC})
 	endforeach(EXEC)
 	
 endif()
+
+
+############# bcl programs ###########################
+
+if(BUILD_SPARC_BCL)
+	string( TOLOWER "${BCL_BACKEND}" BCL_BACKEND )
+
+	message("using backend ${BCL_BACKEND}")
+	
+	find_package(Threads REQUIRED)
+	
+	set (UPCXX_VERBOSE ON)
+	include(cmake/UPCXXConfig.cmake)
+	if (NOT EXISTS "${UPCXX_META_EXECUTABLE}")
+	   message( FATAL_ERROR "cannot find upcxx" )
+	endif()
+	
+
+	if(BCL_BACKEND STREQUAL "shmem")
+		set(BCL_DEFINITIONS ${BCL_DEFINITIONS} -DGASNET_EX -DGASNET_SEQ)
+		set(BCL_LIBRARIES shmem shcoll shmemc-ucx shmemt shmemu pmix ucp)
+		link_directories(${EXEC} PUBLIC "$ENV{HOME}/local2/lib" )
+		include_directories(${EXEC} PUBLIC "$ENV{HOME}/local2/include" )
+		set(BCL_DEFINITIONS ${BCL_DEFINITIONS} -DSHMEM)
+	elseif(BCL_BACKEND STREQUAL "gasnet_ex")
+		set(BCL_INCLUDED_DIR ${UPCXX_INCLUDE_DIRS})
+		set(BCL_DEFINITIONS ${BCL_DEFINITIONS} -DGASNET_EX -DGASNET_SEQ)
+		set(BCL_LIBRARIES ${UPCXX_LIBRARIES})
+	elseif(BCL_BACKEND STREQUAL "mpi")
+		set(BCL_INCLUDED_DIR ${MPI_CXX_INCLUDE_DIRS})
+	else()
+		message( FATAL_ERROR "unknown backend ${BCL_BACKEND}" )
+	endif()
+	
+	find_package(MPI 3.0 REQUIRED)
+	find_package(ZLIB REQUIRED)
+
+	link_directories( "${LOCAL_EXT_PREFIX_DIR}/lib" )
+	link_directories( "${LOCAL_EXT_PREFIX_DIR}/lib64" )
+
+	set(NAME "kmer_counting_bcl_${BCL_BACKEND}")
+	add_executable( ${NAME} 
+		src/kmer_counting_bcl.cpp 
+		src/kmer.cpp src/sparc/log.cpp src/sparc/utils.cpp
+		)
+						
+	foreach(EXEC ${NAME} )
+		target_compile_features(${EXEC} PRIVATE cxx_std_17)
+		add_dependencies(${EXEC} spdloglib gzstreamlib ${BCL_DEPENDIES})
+		target_include_directories(${EXEC} PUBLIC ${BCL_INCLUDED_DIR} "${LOCAL_EXT_PREFIX_DIR}/include" )
+		target_compile_definitions(${EXEC} PUBLIC ${BCL_DEFINITIONS})
+		target_compile_definitions(${EXEC} PUBLIC "-DUSE_BCLCLIENT")
+        target_link_libraries(${EXEC} PUBLIC ${MPI_CXX_LIBRARIES})
+		target_link_libraries(${EXEC} PUBLIC spdlog gzstream ZLIB::ZLIB ${BCL_LIBRARIES})
+	    set_target_properties(${EXEC} PROPERTIES EXCLUDE_FROM_ALL TRUE)
+	    add_dependencies(sparc_bcl ${EXEC})
+	endforeach(EXEC)
+	
+endif()
+
+
 
 
 

@@ -213,7 +213,6 @@ inline void map_line(int iteration, int n_interation, const std::string &line,
 			upcxx::progress();
 		}
 	}
-	fut_all.wait();
 }
 
 int process_krm_file(int iteration, int n_interation,

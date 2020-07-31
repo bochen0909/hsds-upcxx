@@ -29,6 +29,8 @@
 using namespace std;
 using namespace sparc;
 
+#define KMER_SEND_BATCH_SIZE (100*1000)
+
 DistrMap<std::string, uint32_t> *g_map = 0;
 size_t g_n_sent = 0;
 
@@ -167,7 +169,8 @@ int main(int argc, char **argv) {
 }
 
 inline void map_line(int iteration, int n_interation, const std::string &line,
-		size_t min_shared_kmers, size_t max_degree) {
+		size_t min_shared_kmers, size_t max_degree,
+		std::vector<std::string> &edges_output) {
 	std::vector<std::string> arr = split(line, "\t");
 	if (arr.empty()) {
 		return;
@@ -191,7 +194,7 @@ inline void map_line(int iteration, int n_interation, const std::string &line,
 	}
 	std::vector<std::pair<uint32_t, uint32_t> > edges = generate_edges(reads,
 			max_degree);
-	upcxx::future<> fut_all = upcxx::make_future();
+
 	for (int i = 0; i < edges.size(); i++) {
 		uint32_t a = edges.at(i).first;
 		uint32_t b = edges.at(i).second;
@@ -202,15 +205,9 @@ inline void map_line(int iteration, int n_interation, const std::string &line,
 			} else {
 				ss << b << " " << a;
 			}
-			const std::string s = ss.str();
-
-			auto fut = g_map->incr(s, 1);
-			fut_all = upcxx::when_all(fut_all, fut);
+			string s = ss.str();
+			edges_output.push_back(s);
 			g_n_sent++;
-
-		}
-		if (i % 10 == 0) {
-			upcxx::progress();
 		}
 	}
 }
@@ -218,20 +215,33 @@ inline void map_line(int iteration, int n_interation, const std::string &line,
 int process_krm_file(int iteration, int n_interation,
 		const std::string &filepath, size_t min_shared_kmers,
 		size_t max_degree) {
+	std::vector<std::string> edges;
 	if (endswith(filepath, ".gz")) {
 		igzstream file(filepath.c_str());
 		std::string line;
 		while (std::getline(file, line)) {
 			map_line(iteration, n_interation, line, min_shared_kmers,
-					max_degree);
+					max_degree, edges);
+			if (edges.size() >= KMER_SEND_BATCH_SIZE) {
+				g_map->incr(edges);
+				edges.clear();
+			}
 		}
 	} else {
 		std::ifstream file(filepath);
 		std::string line;
 		while (std::getline(file, line)) {
 			map_line(iteration, n_interation, line, min_shared_kmers,
-					max_degree);
+					max_degree, edges);
+			if (edges.size() >= KMER_SEND_BATCH_SIZE) {
+				g_map->incr(edges);
+				edges.clear();
+			}
 		}
+	}
+	if (edges.size() > 0) {
+		g_map->incr(edges);
+		edges.clear();
 	}
 
 	return 0;

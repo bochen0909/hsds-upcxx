@@ -27,7 +27,7 @@ option(BUILD_WITH_LEVELDB "build MPI version of Sparc with leveldb support" OFF)
 option(BUILD_WITH_MPIClient "build MPI version of Sparc with mpi client" OFF)
 
 if(NOT DEFINED BCL_BACKEND)
-	set(BCL_BACKEND mpi) #mpi, shmem, gasnet_ex, upcxx,
+	set(BCL_BACKEND gasnet_ex) #mpi, shmem, gasnet_ex
 endif()
 
 set(LOCAL_EXT_PREFIX_DIR ${PROJECT_SOURCE_DIR}/extlib/local)       
@@ -489,6 +489,7 @@ if(BUILD_SPARC_BCL)
 	message("using backend ${BCL_BACKEND}")
 	
 	find_package(Threads REQUIRED)
+	set(BCL_DEPENDIES bcllib)
 	
 	set (UPCXX_VERBOSE ON)
 	include(cmake/UPCXXConfig.cmake)

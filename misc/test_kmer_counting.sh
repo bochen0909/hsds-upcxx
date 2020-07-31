@@ -19,10 +19,10 @@ test_kmer_counting () {
    
 	MPICMD1=$MPICMD
 	MPICMD2=$MPICMD
-	if [[ $MPICMD1 == mpirun*  && $prog1 == *upc ]]; then
+	if [[ $MPICMD1 == mpirun*  && ( $prog1 == *upc || $prog1 == *gasnet_ex ) ]]; then
 		MPICMD1="upcxx-run -n 4"
 	fi
-	if [[ $MPICMD2 == mpirun*  && $prog2 == *upc ]]; then
+	if [[ $MPICMD2 == mpirun*  && ( $prog2 == *upc || $prog2 == *gasnet_ex ) ]]; then
 		MPICMD2="upcxx-run -n 4"
 	fi
    CMD1="$PREFIX1 $MPICMD1 $prog1 $opt1"
@@ -71,9 +71,10 @@ test_kmer_counting () {
 
 
 for MPICMD in "" "mpirun -n 4"; do
+	#test_kmer_counting kmer_counting_mpi kmer_counting_bcl_gasnet_ex "-k 25" "-k 25"
+	#CAT1=zcat test_kmer_counting kmer_counting_bcl_gasnet_ex kmer_counting_bcl_gasnet_ex "-k 5 -z" "-k 5"
 
 	test_kmer_counting kmer_counting_mpi kmer_counting_upc "-k 25" "-k 25"
-	
 	CAT1=zcat test_kmer_counting kmer_counting_upc kmer_counting_upc "-k 5 -z" "-k 5"
 
 	test_kmer_counting kmer_counting_mrmpi kmer_counting_mimir "-k 5" "-k 5"

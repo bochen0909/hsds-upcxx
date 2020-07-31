@@ -177,7 +177,11 @@ inline void map_line(const string &line, int kmer_length,
 
 void update_batch(std::vector<std::string> &kmers) {
 	for (auto &s : kmers) {
-		g_map->operator[](s) = g_map->operator[](s) + 1;
+		auto result = g_map->find(s);
+		uint32_t n=0;
+    		if(result != g_map->end()){
+			n=*result;}
+		g_map->insert_or_assign(s,n+1);
 		g_n_sent++;
 	}
 	kmers.clear();

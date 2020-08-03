@@ -107,7 +107,7 @@ for MPICMD in "" "mpirun -n 4"; do
 
 	test_krm kmer_read_mapping_mpi kmer_read_mapping_upc "-k 25" "-k 25"
 	
-	CAT1=zcat test_krm kmer_read_mapping_upc kmer_read_mapping_upc "-k 5 -z" "-k 5"
+	CAT1=zcat test_krm kmer_read_mapping_upc kmer_read_mapping_mpi "-k 5 -z" "-k 5"
 
 	test_krm kmer_read_mapping_mrmpi kmer_read_mapping_mimir "-k 5" "-k 5"
 	

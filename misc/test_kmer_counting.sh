@@ -75,7 +75,7 @@ for MPICMD in "" "mpirun -n 4"; do
 	#CAT1=zcat test_kmer_counting kmer_counting_bcl_gasnet_ex kmer_counting_bcl_gasnet_ex "-k 5 -z" "-k 5"
 
 	test_kmer_counting kmer_counting_mpi kmer_counting_upc "-k 25" "-k 25"
-	CAT1=zcat test_kmer_counting kmer_counting_upc kmer_counting_upc "-k 5 -z" "-k 5"
+	CAT1=zcat test_kmer_counting kmer_counting_upc kmer_counting_mpi "-k 5 -z" "-k 5"
 
 	test_kmer_counting kmer_counting_mrmpi kmer_counting_mimir "-k 5" "-k 5"
 	test_kmer_counting kmer_counting_mrmpi kmer_counting_mimir "-k 25" "-k 25"

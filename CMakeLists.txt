@@ -17,11 +17,11 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g -ggdb -DDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -s")
 
 
-option(BUILD_SPARC_MIMIR "build Mimir version of Sparc" ON)
-option(BUILD_SPARC_MRMPI "build MR-MPI version of Sparc" ON)
-option(BUILD_SPARC_MPI "build pure MPI version of Sparc" ON)
-option(BUILD_SPARC_UPCXX "build UPCXX version of Sparc" ON)
-option(BUILD_SPARC_BCL "build bcl version of Sparc" ON)
+option(BUILD_SPARC_MIMIR "build Mimir version of Sparc" OFF)
+option(BUILD_SPARC_MRMPI "build MR-MPI version of Sparc" OFF)
+option(BUILD_SPARC_MPI "build pure MPI version of Sparc" OFF)
+option(BUILD_SPARC_UPCXX "build UPCXX version of Sparc" OFF)
+option(BUILD_SPARC_BCL "build bcl version of Sparc" OFF)
 
 option(BUILD_WITH_LEVELDB "build MPI version of Sparc with leveldb support" OFF)
 option(BUILD_WITH_MPIClient "build MPI version of Sparc with mpi client" OFF)
@@ -34,7 +34,7 @@ set(LOCAL_EXT_PREFIX_DIR ${PROJECT_SOURCE_DIR}/extlib/local)
 
 add_custom_target(sparc_mimir)
 add_custom_target(sparc_mrmpi)
-add_custom_target(sparc_mpi ALL)
+add_custom_target(sparc_mpi)
 add_custom_target(sparc_upcxx)
 add_custom_target(sparc_bcl)
 
@@ -105,7 +105,7 @@ endif()
 
 
 ############# mpi programs ###########################
-if(BUILD_SPARC_MIMIR)
+if(BUILD_SPARC_MPI)
 	find_package(MPI 3.0 REQUIRED)
 	find_package(ZLIB REQUIRED)
 	find_package(Threads REQUIRED)

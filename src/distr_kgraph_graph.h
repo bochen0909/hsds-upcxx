@@ -143,7 +143,7 @@ public:
 		return fut_all;
 	}
 
-	int dump_clusters(const std::string &filepath, char sep) {
+	int dump_edges(const std::string &filepath, char sep) {
 		int stat = 0;
 		std::ostream *myfile_pointer = 0;
 		if (sparc::endswith(filepath, ".gz")) {

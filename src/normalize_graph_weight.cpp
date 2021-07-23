@@ -15,7 +15,6 @@
 #include <string>
 #include <iostream>
 #include <unistd.h>
-#include <upcxx/upcxx.hpp>
 
 #include "argagg.hpp"
 #include "gzstream.h"
@@ -23,26 +22,24 @@
 #include "kmer.h"
 #include "log.h"
 #include "config.h"
-#include "distr_kgraph_graph.h"
-#include "upchelper.h"
 
 using namespace std;
 using namespace sparc;
 
-#define KMER_SEND_BATCH_SIZE (1000*1000)
-
-DistrGraph *g_graph = 0;
-
 size_t g_n_sent = 0;
 
+template<>
+struct std::hash<std::pair<uint32_t, uint32_t>> {
+	inline size_t operator()(const std::pair<uint32_t, uint32_t> &val) const {
+		size_t h = val.first; //not safe assume uint32_t is 8 bits;
+		return (h << 32) + val.second;
+	}
+};
+
 struct Config: public BaseConfig {
-	int k_neigbhor;
-	bool weighted;
 
 	void print() {
 		BaseConfig::print();
-		myinfo("config: k_neigbhor=%ld", k_neigbhor);
-		myinfo("config: n_iteration=%s", weighted ? "weighted" : "unweighted");
 	}
 };
 
@@ -53,34 +50,40 @@ void check_arg(argagg::parser_results &args, char *name) {
 	}
 
 }
+void get_all_files(const std::vector<std::string> &folders,
+		std::vector<std::string> &ret) {
+
+	for (size_t i = 0; i < folders.size(); i++) {
+		auto v = list_dir(folders.at(i).c_str());
+		ret.insert(ret.end(), v.begin(), v.end());
+	}
+	sort(ret.begin(), ret.end());
+	ret.erase(unique(ret.begin(), ret.end()), ret.end());
+}
+
+std::vector<std::string> get_all_files(
+		const std::vector<std::string> &folders) {
+	std::vector<std::string> ret;
+	get_all_files(folders, ret);
+	return ret;
+}
 
 int run(const std::vector<std::string> &input, Config &config);
 
 int main(int argc, char **argv) {
-	upcxx::init();
 
 	Config config;
 	config.program = argv[0];
-	config.rank = upcxx::rank_me();
-	config.nprocs = upcxx::rank_n();
 	config.mpi_hostname = sparc::get_hostname();
-	set_spdlog_pattern(config.mpi_hostname.c_str(), config.rank);
+	set_spdlog_pattern(config.mpi_hostname.c_str(), 0);
 
-	if (config.rank == 0) {
-		myinfo("Welcome to Sparc!");
-	}
 	argagg::parser argparser { {
 
 	{ "help", { "-h", "--help" }, "shows this help message", 0 },
 
 	{ "zip_output", { "-z", "--zip" }, "zip output files", 0 },
 
-	{ "output", { "-o", "--output" }, "output folder", 1 },
-
-	{ "k_neigbhor", { "-k", },
-			"how many neighbors to get ", 0 },
-
-	{ "weighted", { "-w", }, "weighted graph", 0 },
+	{ "output", { "-o", "--output" }, "output file", 1 },
 
 	} };
 
@@ -97,9 +100,7 @@ int main(int argc, char **argv) {
 		return EXIT_SUCCESS;
 	}
 
-	config.k_neigbhor = args["k_neigbhor"].as<uint32_t>(100);
 	config.zip_output = args["zip_output"];
-	config.weighted = args["weighted"];
 
 	if (args.pos.empty()) {
 		std::cerr << "no input files are provided" << endl;
@@ -122,31 +123,19 @@ int main(int argc, char **argv) {
 	string outputpath = args["output"].as<string>();
 	config.outputpath = outputpath;
 
-	upcxx::barrier();
-	if (upcxx::rank_me() == 0) {
-		if (dir_exists(outputpath.c_str())) {
-			cerr << "Error, output dir exists:  " << outputpath << endl;
-			return EXIT_FAILURE;
-		}
+	if (file_exists(outputpath.c_str())) {
+		cerr << "Warning, output file is overwritten:  " << outputpath << endl;
 	}
 
-	if (upcxx::rank_me() == 0) {
-		if (make_dir(outputpath.c_str()) < 0) {
-			cerr << "Error, mkdir dir failed for " << outputpath << endl;
-			return EXIT_FAILURE;
-		}
-	}
-
-	std::vector<std::string> myinput = get_my_files(config.inputpath);
+	std::vector<std::string> myinput = get_all_files(config.inputpath);
 	myinfo("#of my input: %ld", myinput.size());
 	run(myinput, config);
-
 
 	return 0;
 }
 
 inline int pasrse_graph_file_line(const std::string &line, bool weighted,
-		std::vector<std::tuple<uint32_t, uint32_t, float>> &edges) {
+		std::unordered_map<std::pair<uint32_t, uint32_t>, float> &edges) {
 
 	if (line.empty()) {
 		return 0;
@@ -160,7 +149,11 @@ inline int pasrse_graph_file_line(const std::string &line, bool weighted,
 		if (weighted) {
 			ss >> w;
 		}
-		edges.push_back( { a, b, w });
+		if (a < b) {
+			edges[std::make_pair(a, b)] = w;
+		} else {
+			edges[std::make_pair(b, a)] = w;
+		}
 		g_n_sent++;
 		return 2;
 	} else if ('#' == line.at(0)) {
@@ -171,17 +164,14 @@ inline int pasrse_graph_file_line(const std::string &line, bool weighted,
 	}
 }
 
-int process_graph_file(const std::string &filepath, bool weighted) {
-	std::vector<std::tuple<uint32_t, uint32_t, float>> edges;
+int process_graph_file(const std::string &filepath,
+		std::unordered_map<std::pair<uint32_t, uint32_t>, float> &edges) {
+	bool weighted = true;
 	if (sparc::endswith(filepath, ".gz")) {
 		igzstream file(filepath.c_str());
 		std::string line;
 		while (std::getline(file, line)) {
 			pasrse_graph_file_line(line, weighted, edges);
-			if (edges.size() >= KMER_SEND_BATCH_SIZE) {
-				g_graph->add_edges(edges).wait();
-				edges.clear();
-			}
 
 		}
 	} else {
@@ -189,48 +179,66 @@ int process_graph_file(const std::string &filepath, bool weighted) {
 		std::string line;
 		while (std::getline(file, line)) {
 			pasrse_graph_file_line(line, weighted, edges);
-			if (edges.size() >= KMER_SEND_BATCH_SIZE) {
-				g_graph->add_edges(edges).wait();
-				edges.clear();
-			}
+
 		}
-	}
-	if (edges.size() > 0) {
-		g_graph->add_edges(edges).wait();
-		edges.clear();
 	}
 
 	return 0;
 }
 
-int make_graph(const std::vector<std::string> &input, bool weighted) {
+int make_graph(const std::vector<std::string> &input,
+		std::unordered_map<std::pair<uint32_t, uint32_t>, float> &edges) {
 
 	for (size_t i = 0; i < input.size(); i++) {
 		myinfo("processing %s", input.at(i).c_str());
-		process_graph_file(input.at(i), weighted);
+		process_graph_file(input.at(i), edges);
 	}
 	return 0;
 
+}
+
+void _normalize(
+		std::unordered_map<std::pair<uint32_t, uint32_t>, float> &edgelist) {
+	if (edgelist.empty()) {
+		return;
+	}
+	float sum = 0;
+	for (auto &kv : edgelist) {
+		sum += kv.second;
+	}
+	float avg = float(sum / edgelist.size());
+
+	for (auto &kv : edgelist) {
+		kv.second /= avg;
+	}
+}
+
+template<typename Iter>
+void write_edges_text(const std::string &path, Iter it, Iter end) {
+
+	auto text_file = fopen(path.c_str(), "wt");
+	for (; it != end; ++it) {
+		auto &kv = *it;
+		fprintf(text_file, "%lu ", (size_t) kv.first.first);
+		fprintf(text_file, "%lu ", (size_t) kv.first.second);
+		fprintf(text_file, "%f", (double) kv.second);
+		fprintf(text_file, "\n");
+	}
+	fclose(text_file);
 }
 
 int run(const std::vector<std::string> &input, Config &config) {
 
-	if (config.rank == 0) {
-		config.print();
+	std::unordered_map<std::pair<uint32_t, uint32_t>, float> edges;
+	make_graph(input, edges);
+	myinfo("normalized by average weights");
+
+	_normalize(edges);
+
+	if (true) {
+		auto path = config.outputpath;
+		write_edges_text(path, edges.begin(), edges.end());
 	}
-
-	g_graph = new DistrGraph(config.k_neigbhor);
-
-	make_graph(input, config.weighted);
-	upcxx::barrier();
-
-	if (config.rank == 0) {
-		myinfo("Finished making graph and totally sent %ld records", g_n_sent);
-	}
-
-	g_graph->dump_edges(config.get_my_output(), '\t');
-
-	delete g_graph;
 
 	return 0;
 

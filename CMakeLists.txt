@@ -59,12 +59,16 @@ if(BUILD_SPARC_UPCXX)
 		)
 	add_executable(kgraph_upcxx
 		src/make_kgraph_upcxx.cpp 
-		src/kmer.cpp src/log.cpp src/utils.cpp
+		src/log.cpp src/utils.cpp
 		)
-		
+	add_executable(normalize_graph
+		src/normalize_graph_weight.cpp 
+		src/log.cpp src/utils.cpp
+		)
+				
 	add_executable(lpav1_upcxx
 		src/lpav1_upcxx.cpp 
-		src/kmer.cpp src/log.cpp src/utils.cpp
+		src/log.cpp src/utils.cpp
 		)
 
 						
@@ -78,6 +82,11 @@ if(BUILD_SPARC_UPCXX)
 	    set_target_properties(${EXEC} PROPERTIES EXCLUDE_FROM_ALL TRUE)
 	    add_dependencies(hsds_upcxx ${EXEC})
 	endforeach(EXEC)
+	
+	add_dependencies(normalize_graph spdloglib gzstreamlib)
+	target_include_directories(normalize_graph PUBLIC "${LOCAL_EXT_PREFIX_DIR}/include" )
+	target_link_libraries(normalize_graph PUBLIC spdlog gzstream ZLIB::ZLIB )
+	
 	
 endif()
 

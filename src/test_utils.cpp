@@ -4,7 +4,7 @@
 #include <algorithm>
 
 #include "acutest.h"
-#include "sparc/utils.h"
+#include "utils.h"
 
 using namespace std;
 using namespace sparc;

@@ -77,3 +77,7 @@ if(BUILD_SPARC_UPCXX)
 	
 endif()
 
+############# unit test ###########################
+add_executable(test_kmer src/test_kmer.cpp src/kmer.cpp src/utils.cpp)
+add_executable(test_utils src/test_utils.cpp src/utils.cpp)
+

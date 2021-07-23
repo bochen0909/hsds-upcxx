@@ -8,7 +8,7 @@
 #ifndef SOURCE_DIRECTORY__SRC_UPCHELPER_H_
 #define SOURCE_DIRECTORY__SRC_UPCHELPER_H_
 
-#include <upcxx/upcxx.hpp>
+#include "upcxx_comp.h"
 #include "limits.h"
 #include "../sparc/utils.h"
 #include "../sparc/log.h"
@@ -37,7 +37,7 @@ bool check_all_peers_on_same_page(const std::vector<std::string> &files) {
 	size_t N = files.size();
 	for (int i = 0; i < N; i++) { //check files
 		std::string fpath = files.at(i);
-		std::string bcast_fpath = upcxx::broadcast_nontrivial<std::string>(std::move(fpath),
+		std::string bcast_fpath = upcxx_broadcast_nontrivial<std::string>(std::move(fpath),
 				0).wait();
 		if (std::find(files.begin(), files.end(), bcast_fpath) == files.end()) {
 			myerror("%s cannot find locally for rank %d", bcast_fpath.c_str(),
@@ -56,11 +56,11 @@ bool check_splitted_files(const std::vector<std::vector<std::string>> &myfiles,
 
 		}
 
-		int N = upcxx::reduce_all(n, upcxx::op_add).wait();
+		int N = upcxx::reduce_all(n, upcxx_op_add).wait();
 
 		if (upcxx::rank_me() == 0 && allfiles.size() != N) {
 			myerror("check_splitted_files, %ld<>%ld", allfiles.size(), N);
-			upcxx::fatal_error("check_splitted_files failed");
+			upcxx_fatal_error("check_splitted_files failed");
 			return false;
 		}
 	}
@@ -69,7 +69,7 @@ bool check_splitted_files(const std::vector<std::vector<std::string>> &myfiles,
 
 	for (int i = 0; i < allfiles.size(); i++) { //check files
 		auto fpath = allfiles.at(i);
-		std::string bcast_fpath = upcxx::broadcast_nontrivial<std::string>(std::move(fpath),
+		std::string bcast_fpath = upcxx_broadcast_nontrivial<std::string>(std::move(fpath),
 				0/* broadcast from rank 0*/).wait();
 
 		int nfound = 0;
@@ -79,7 +79,7 @@ bool check_splitted_files(const std::vector<std::vector<std::string>> &myfiles,
 			}
 		}
 
-		int N = upcxx::reduce_all(nfound, upcxx::op_add).wait();
+		int N = upcxx::reduce_all(nfound, upcxx_op_add).wait();
 
 		if (upcxx::rank_me() == 0 && 1 != N) {
 			myerror("check_splitted_files # of [%s] is %d<>1",
@@ -131,7 +131,7 @@ std::vector<std::vector<std::string>> get_my_files(
 		}
 		if (allfiles.empty()) {
 			myerror("no input files found");
-			upcxx::fatal_error("no input files found");
+			upcxx_fatal_error("no input files found");
 		}
 
 		std::vector<std::string> localfiles;
@@ -155,12 +155,12 @@ std::vector<std::vector<std::string>> get_my_files(
 
 		if (!check_splitted_files(myinput, allfiles)) {
 			myerror("check_splitted_files failed");
-			upcxx::fatal_error("check_splitted_files failed");
+			upcxx_fatal_error("check_splitted_files failed");
 		}
 
 	} else {
 		myerror("Check files failed for 3 retries");
-		upcxx::fatal_error("Check files failed for 3 retries");
+		upcxx_fatal_error("Check files failed for 3 retries");
 
 	}
 	return myinput;

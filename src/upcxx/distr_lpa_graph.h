@@ -1,5 +1,5 @@
 #include <vector>
-#include <upcxx/upcxx.hpp>
+#include "upcxx_comp.h"
 
 #ifdef USE_TSL_ROBIN_MAP
 #include <tsl/robin_map.h>
@@ -200,7 +200,7 @@ public:
 		upcxx::barrier();
 
 		int32_t all_activates =
-				upcxx::reduce_all(n_activate, upcxx::op_add).wait();
+				upcxx::reduce_all(n_activate, upcxx_op_add).wait();
 
 		if (upcxx::rank_me() == 0) {
 			myinfo("# of activate node: %ld", all_activates);
@@ -411,7 +411,7 @@ public:
 		myinfo("Wrote %ld nodes", n);
 
 		upcxx::barrier();
-		uint64_t sum_n = upcxx::reduce_all(n, upcxx::op_add).wait();
+		uint64_t sum_n = upcxx_reduce_all(n, upcxx_op_add).wait();
 		if (upcxx::rank_me() == 0) {
 			myinfo("# of total nodes = %ld", sum_n);
 		}

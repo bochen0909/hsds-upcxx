@@ -1,14 +1,5 @@
-# Sparc in MPI
-
-This site provides MPI based implementation of **Sparc** (refer to [paper](https://academic.oup.com/bioinformatics/article/35/5/760/5078476) and [sources](https://bitbucket.org/LizhenShi/sparc/src/master/)).
-
-Four versions are provided: *mrmpi*, *mimir*, *mpi* and *upcxx*. Each version provides a few programs that coresponding the to steps in [Sparc](https://bitbucket.org/LizhenShi/sparc/src/master/README.md) .
-
-**Sparc_mrmpi** utilized map-reduce lib of [MapReduce-MPI Library](https://mapreduce.sandia.gov/). Since Sparc is based on [Apache Spark](https://spark.apache.org/) whose foundation is map-reduce, this is a straightforward "translation".
-
-**Sparc_mimir** was written based on another MPI map-reduce lib, [Mimir](https://github.com/TauferLab/Mimir), which performs better than sparc_mrmpi. It is also a straightforward "translation".
-
-**Sparc_mpi** is a re-implementation that based on MPI and [ZMQ](https://zeromq.org/) using client-server p2p communication. It preforms much better than sparc_mrmpi and sparc_mimir.
+# Hierarchical Clustering of DNA sequence 
+# (working in progress......)
 
 **Sparc_upcxx** is a re-implementation that uses [UPC++](https://bitbucket.org/berkeleylab/upcxx/wiki/Home). It performs similar or even better than sparc_mpi. However I find it might be tricky to run a upcxx program since the data transfer is hidden from users. I found failure sometimes when lots of rpc calls were performed asynchronously. 
 
@@ -33,75 +24,6 @@ First clone the code
 
 All the versions are independent from each other, you may choose to only build the version that you are interested in.
 
-
-### Mimir Version
-
-#### Requires
-* Linux 
-* mpi >= 3.0
-* c++ standard >= 11 
-* autoconf>= 2.67
-* automake >= 1.15
-* libtool >= 2.4.4
-
-
-#### Build
-```
-    mkdir build && cd build
-    cmake -DBUILD_SPARC_MIMIR=ON ..
-    make sparc_mimir
-```
-
-### MRMPI Version
-
-#### Requires
-* Linux 
-* mpi >= 3.0
-* c++ standard >= 11 
-
-
-#### Build
-```
-    mkdir build && cd build
-    cmake -DBUILD_SPARC_MRMPI=ON ..
-    make sparc_mrmpi
-
-```
-
-
-### MPI Version
-
-#### Requires
-* Linux 
-* mpi >= 3.0
-* c++ standard >= 11 
-
-
-#### Build
-```
-    mkdir build && cd build
-    cmake -DBUILD_SPARC_MPI=ON ..
-    make sparc_mpi
-```
-### UPC++ Version
-
-#### Requires
-* Linux 
-* mpi >= 3.0
-* c++ standard >= 11 
-* upcxx 2020.3.2
-
-
-#### Build
-
-Install UPC++ is beyond this scope. 
-Set environment *UPCXX_INSTALL* helps cmake to find upcxx.
-Also remember set UPCXX_NETWORK to your network, otherwise smp is most likely be used. 
-```
-    mkdir build && cd build
-    cmake -DBUILD_SPARC_UPCXX=ON ..
-    make sparc_upcxx
-```
 
 
 ## Usages
@@ -184,14 +106,4 @@ For example for mpi version:
     
 ```
 
-### LPA Clustering
-
-Find clusters by Label Propagation Algorithm. 
-In this step there are two options: PowerGraph LPA or *lpav1_mpi/upcxx*. 
-
-*lpav1_mpi/upcxx* is my implementation of LPA in MPI or UPC++, which is build in the corresponding targets.
-
-PowerGraph(https://github.com/jegonzal/PowerGraph) also provide LPA program which can be got from github.
-
-*Remark:* Since this step is purely graph clustering, actually any graph clustering algorithms can be used providing it can work on graphs of billions edges.
-
+### Clustering

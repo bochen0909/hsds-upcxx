@@ -242,7 +242,11 @@ int run(const std::vector<std::string> &input, Config &config) {
 					bfirst = false;
 				}
 				return ss.str();
-			});
+			},
+			[](const std::string&, const std::unordered_set<std::string> &s) {
+				return s.size() >= 2;
+			}
+	);
 
 	delete g_map;
 

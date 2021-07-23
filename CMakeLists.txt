@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(Sparc-MPI VERSION 0.1.0 LANGUAGES CXX)
+project(HSDS-UPCXX VERSION 0.1.0 LANGUAGES CXX)
 
 #specify the C++ standard
 set(CMAKE_STANDARD 11)

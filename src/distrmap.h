@@ -29,6 +29,12 @@ template<> inline uint32_t consistent_hash(const std::string &str) {
 	}
 	return h;
 }
+
+template<typename K, typename V>
+bool TRUE_FILTER(const K&, const V&) {
+	return true;
+}
+
 template<typename K, typename V> class DistrMap {
 private:
 	// store the local unordered map in a distributed object to access from RPCs
@@ -142,6 +148,11 @@ public:
 
 	template<typename VALFUN> int dump(const std::string &filepath, char sep,
 			VALFUN fun) {
+		return dump(filepath, sep, fun, TRUE_FILTER<K, V>);
+	}
+
+	template<typename VALFUN, typename FILTER> int dump(
+			const std::string &filepath, char sep, VALFUN fun, FILTER filter) {
 		int stat = 0;
 		std::ostream *myfile_pointer = 0;
 		if (sparc::endswith(filepath, ".gz")) {
@@ -155,8 +166,10 @@ public:
 		MapIterator<K, V> it = local_map->begin();
 		uint64_t n = 0;
 		for (; it != local_map->end(); it++) {
-			myfile << it->first << sep << fun(it->second) << std::endl;
-			++n;
+			if (filter(it->first, it->second)) {
+				myfile << it->first << sep << fun(it->second) << std::endl;
+				++n;
+			}
 		}
 		if (sparc::endswith(filepath, ".gz")) {
 			((ogzstream&) myfile).close();

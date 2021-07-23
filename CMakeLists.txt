@@ -57,14 +57,18 @@ if(BUILD_SPARC_UPCXX)
 		src/kmer_read_mapping_upcxx.cpp 
 		src/kmer.cpp src/log.cpp src/utils.cpp
 		)
-
+	add_executable(kgraph_upcxx
+		src/make_kgraph_upcxx.cpp 
+		src/kmer.cpp src/log.cpp src/utils.cpp
+		)
+		
 	add_executable(lpav1_upcxx
 		src/lpav1_upcxx.cpp 
 		src/kmer.cpp src/log.cpp src/utils.cpp
 		)
 
 						
-	foreach(EXEC edge_generating_upcxx kmer_counting_upcxx kmer_read_mapping_upcxx lpav1_upcxx)
+	foreach(EXEC edge_generating_upcxx kmer_counting_upcxx kmer_read_mapping_upcxx kgraph_upcxx lpav1_upcxx)
 		add_dependencies(${EXEC} spdloglib gzstreamlib)
 		target_include_directories(${EXEC} PUBLIC ${UPCXX_INCLUDE_DIRS} "${LOCAL_EXT_PREFIX_DIR}/include" )
 		target_compile_definitions(${EXEC} PUBLIC ${UPCXX_DEFINITIONS})

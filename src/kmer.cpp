@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <cmath>
 #include "kmer.h"
-#include "sparc/utils.h"
+#include "utils.h"
 using namespace std;
 
 #define rand01 (((double) rand() / (RAND_MAX)) )

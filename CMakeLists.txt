@@ -45,22 +45,22 @@ if(BUILD_SPARC_UPCXX)
 
 	add_executable(edge_generating_upcxx 
 		src/edge_generating_upcxx.cpp 
-		src/kmer.cpp src/sparc/log.cpp src/sparc/utils.cpp
+		src/kmer.cpp src/log.cpp src/utils.cpp
 		)
 
 	add_executable(kmer_counting_upcxx 
 		src/kmer_counting_upcxx.cpp 
-		src/kmer.cpp src/sparc/log.cpp src/sparc/utils.cpp
+		src/kmer.cpp src/log.cpp src/utils.cpp
 		)
 	
 	add_executable(kmer_read_mapping_upcxx 
 		src/kmer_read_mapping_upcxx.cpp 
-		src/kmer.cpp src/sparc/log.cpp src/sparc/utils.cpp
+		src/kmer.cpp src/log.cpp src/utils.cpp
 		)
 
 	add_executable(lpav1_upcxx
 		src/lpav1_upcxx.cpp 
-		src/kmer.cpp src/sparc/log.cpp src/sparc/utils.cpp
+		src/kmer.cpp src/log.cpp src/utils.cpp
 		)
 
 						

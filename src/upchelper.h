@@ -10,9 +10,9 @@
 
 #include "upcxx_comp.h"
 #include "limits.h"
-#include "../sparc/utils.h"
-#include "../sparc/log.h"
-#include "../kmer.h"
+#include "utils.h"
+#include "log.h"
+#include "kmer.h"
 
 namespace sparc {
 bool check_all_peers_on_same_page(const std::vector<std::string> &files) {
@@ -35,7 +35,7 @@ bool check_all_peers_on_same_page(const std::vector<std::string> &files) {
 		}
 	}
 	size_t N = files.size();
-	for (int i = 0; i < N; i++) { //check files
+	for (size_t i = 0; i < N; i++) { //check files
 		std::string fpath = files.at(i);
 		std::string bcast_fpath = upcxx_broadcast_nontrivial<std::string>(std::move(fpath),
 				0).wait();
@@ -67,7 +67,7 @@ bool check_splitted_files(const std::vector<std::vector<std::string>> &myfiles,
 
 	upcxx::barrier();
 
-	for (int i = 0; i < allfiles.size(); i++) { //check files
+	for (size_t i = 0; i < allfiles.size(); i++) { //check files
 		auto fpath = allfiles.at(i);
 		std::string bcast_fpath = upcxx_broadcast_nontrivial<std::string>(std::move(fpath),
 				0/* broadcast from rank 0*/).wait();

@@ -11,7 +11,7 @@
 #include <vector>
 #include <string>
 #include "log.h"
-#include "DBHelper.h"
+
 
 struct BaseConfig {
 
@@ -24,7 +24,6 @@ struct BaseConfig {
 	int port;
 	int rank;
 	int nprocs;
-	DBHelper::DBTYPE dbtype;
 	bool zip_output;
 	std::vector<int> peers_ports;
 	std::vector<int> hash_rank_mapping;
@@ -47,10 +46,6 @@ struct BaseConfig {
 		}
 		myinfo("config: outputpath=%s", outputpath.c_str());
 		myinfo("config: scratch_dir=%s", scratch_dir.c_str());
-		myinfo("config: dbtype=%s",
-				dbtype == DBHelper::MEMORY_DB ?
-						"memory" :
-						(dbtype == DBHelper::LEVEL_DB ? "leveldb" : "rocksdb"));
 		myinfo("config: #procs=%d", nprocs);
 	}
 	std::string get_dbpath() {

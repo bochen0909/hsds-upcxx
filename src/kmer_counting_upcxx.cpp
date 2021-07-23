@@ -19,12 +19,12 @@
 
 #include "argagg.hpp"
 #include "gzstream.h"
-#include "sparc/utils.h"
+#include "utils.h"
 #include "kmer.h"
-#include "sparc/log.h"
-#include "sparc/config.h"
-#include "upcxx/distrmap.h"
-#include "upcxx/upchelper.h"
+#include "log.h"
+#include "config.h"
+#include "distrmap.h"
+#include "upchelper.h"
 
 using namespace std;
 using namespace sparc;

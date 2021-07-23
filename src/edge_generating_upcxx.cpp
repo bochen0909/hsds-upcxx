@@ -19,12 +19,12 @@
 
 #include "argagg.hpp"
 #include "gzstream.h"
-#include "sparc/utils.h"
+#include "utils.h"
 #include "kmer.h"
-#include "sparc/log.h"
-#include "sparc/config.h"
-#include "upcxx/distrmap.h"
-#include "upcxx/upchelper.h"
+#include "log.h"
+#include "config.h"
+#include "distrmap.h"
+#include "upchelper.h"
 
 using namespace std;
 using namespace sparc;
@@ -185,7 +185,7 @@ inline void map_line(int iteration, int n_interation, const std::string &line,
 	arr = split(seq, " ");
 
 	std::vector<uint32_t> reads;
-	for (int i = 0; i < arr.size(); i++) {
+	for (size_t i = 0; i < arr.size(); i++) {
 		std::string a = arr.at(i);
 		trim(a);
 		if (!a.empty()) {
@@ -195,7 +195,7 @@ inline void map_line(int iteration, int n_interation, const std::string &line,
 	std::vector<std::pair<uint32_t, uint32_t> > edges = generate_edges(reads,
 			max_degree);
 
-	for (int i = 0; i < edges.size(); i++) {
+	for (size_t i = 0; i < edges.size(); i++) {
 		uint32_t a = edges.at(i).first;
 		uint32_t b = edges.at(i).second;
 		if ((a + b) % n_interation == iteration) {

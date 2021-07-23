@@ -4,7 +4,7 @@
 #ifdef USE_TSL_ROBIN_MAP
 #include <tsl/robin_map.h>
 #else
-#include "../sparc/robin_hood.h"
+#include "robin_hood.h"
 #endif
 
 #ifdef USE_TSL_ROBIN_MAP

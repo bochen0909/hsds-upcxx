@@ -1,5 +1,4 @@
 # Hierarchical Clustering of DNA sequence 
-# (working in progress......)
 
 **Sparc_upcxx** is a re-implementation that uses [UPC++](https://bitbucket.org/berkeleylab/upcxx/wiki/Home). It performs similar or even better than sparc_mpi. However I find it might be tricky to run a upcxx program since the data transfer is hidden from users. I found failure sometimes when lots of rpc calls were performed asynchronously. 
 
@@ -107,3 +106,5 @@ For example for mpi version:
 ```
 
 ### Clustering
+
+Use lpav1_upcxx to do graph clustering.
